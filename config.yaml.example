@@ -24,6 +24,7 @@ stt:
   system: whisper  # whisper | deepgram | windows
   whisper:
     model_path: ggml-base.en.bin
+    language: en  # en, ru, auto, etc.
   deepgram:
     api_key: YOUR_DEEPGRAM_API_KEY
     model: nova-2

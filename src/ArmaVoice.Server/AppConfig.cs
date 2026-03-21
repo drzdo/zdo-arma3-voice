@@ -192,6 +192,7 @@ public class WindowsSttConfig
 public class WhisperConfig
 {
     public string ModelPath { get; set; } = "";
+    public string Language { get; set; } = "en";
 }
 
 public class DeepgramConfig

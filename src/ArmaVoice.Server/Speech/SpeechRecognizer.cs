@@ -15,11 +15,11 @@ public class WhisperRecognizer : ISpeechRecognizer
     private bool _recording;
     private readonly object _lock = new();
 
-    public WhisperRecognizer(string modelPath = "ggml-base.en.bin")
+    public WhisperRecognizer(string modelPath = "ggml-base.en.bin", string language = "en")
     {
         var factory = WhisperFactory.FromPath(modelPath);
         _processor = factory.CreateBuilder()
-            .WithLanguage("en")
+            .WithLanguage(language)
             .Build();
 
         _waveIn = new WaveInEvent

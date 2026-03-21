@@ -66,7 +66,7 @@ public class Program
                 #pragma warning restore CA1416
                 "google" => new GoogleRecognizer(config.Stt.Google.ApiKey, config.Stt.Google.Language),
                 "azure" => new AzureRecognizer(config.Stt.Azure.SubscriptionKey, config.Stt.Azure.Region, config.Stt.Azure.Language),
-                _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath),
+                _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath, config.Stt.Whisper.Language),
             };
             Log.Info("Server", $"STT ({config.Stt.System}) ready.");
         }
