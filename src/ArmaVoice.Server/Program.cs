@@ -37,9 +37,9 @@ public class Program
         Console.WriteLine($"[Server] LLM intent: {config.Llm.Intent.System}");
         Console.WriteLine($"[Server] LLM dialogue: {config.Llm.Dialogue.System}");
 
-        // Load commands and functions from directories
+        // Load commands and functions relative to config file location
         var commandRegistry = new CommandRegistry();
-        var baseDir = AppContext.BaseDirectory;
+        var baseDir = Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? ".";
         commandRegistry.LoadCommands(Path.Combine(baseDir, "commands"));
         commandRegistry.LoadFunctions(Path.Combine(baseDir, "functions"));
 

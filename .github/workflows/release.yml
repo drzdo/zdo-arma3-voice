@@ -29,10 +29,15 @@ jobs:
           Compress-Archive -LiteralPath "@arma3_mic" -DestinationPath ../arma3_mic_mod.zip
           Pop-Location
 
+      - name: Package server
+        shell: pwsh
+        run: |
+          Compress-Archive -LiteralPath "artifacts/arma3-mic-server" -DestinationPath arma3_mic_server.zip
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
             arma3_mic_mod.zip
-            artifacts/arma3-mic-server/ArmaVoice.Server.exe
+            arma3_mic_server.zip
