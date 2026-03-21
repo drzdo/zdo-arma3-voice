@@ -43,7 +43,7 @@ public class IntentParsed
 
 public class LocationParsed
 {
-    /// <summary>"look_target", "relative", "azimuth"</summary>
+    /// <summary>"look_target", "relative", "azimuth", "marker"</summary>
     [JsonPropertyName("type")]
     public string Type { get; set; } = "look_target";
 
@@ -57,6 +57,10 @@ public class LocationParsed
     /// <summary>For azimuth: degrees 0-360</summary>
     [JsonPropertyName("azimuth")]
     public float? Azimuth { get; set; }
+
+    /// <summary>For marker: marker name</summary>
+    [JsonPropertyName("marker")]
+    public string? Marker { get; set; }
 }
 
 // ── Context passed to LLM ───────────────────────────────
@@ -143,7 +147,9 @@ public class IntentParser
             location (optional, object): WHERE.
               type="look_target" — "there","that position","here".
               type="relative" + distance (meters) + direction ("forward","back","left","right","north","south","east","west")
+                "go south" or "watch south" with no distance = use distance=100.
               type="azimuth" + distance (meters) + azimuth (degrees 0-360)
+              type="marker" + marker (string) — "go to marker Alpha" / "двигай к маркеру Альфа". Server will resolve marker position via SQF.
 
             target (optional, string): target unit netId or name.
             text (optional, string): for dialogue — what the player said.

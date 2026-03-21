@@ -2,9 +2,6 @@ using System.Text.Json;
 
 namespace ArmaVoice.Server.Game;
 
-/// <summary>
-/// Holds the latest game state snapshot, updated from JSON state messages.
-/// </summary>
 public class GameState
 {
     public float[] PlayerPos { get; set; } = [0, 0, 0];
@@ -12,25 +9,33 @@ public class GameState
     public List<(string NetId, float[] Pos)> NearbyUnits { get; } = new();
 
     /// <summary>
-    /// Update from JSON state message: {"t":"state","p":[x,y,z],"d":dir,"u":[["netId",[x,y,z]],...]}
+    /// Update player pos + dir from head message (every frame).
+    /// {"t":"head","p":[x,y,z],"d":dir}
     /// </summary>
-    public void UpdateFromState(JsonElement root)
+    public void UpdateHead(JsonElement root)
     {
         try
         {
-            // Player position
             if (root.TryGetProperty("p", out var p) && p.ValueKind == JsonValueKind.Array && p.GetArrayLength() >= 3)
-            {
                 PlayerPos = [p[0].GetSingle(), p[1].GetSingle(), p[2].GetSingle()];
-            }
 
-            // Player direction
             if (root.TryGetProperty("d", out var d))
-            {
                 PlayerDir = d.GetSingle();
-            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GameState", $"Error parsing head: {ex.Message}");
+        }
+    }
 
-            // Nearby units
+    /// <summary>
+    /// Update nearby units from throttled state message.
+    /// {"t":"state","u":[["netId",[x,y,z]],...]}
+    /// </summary>
+    public void UpdateState(JsonElement root)
+    {
+        try
+        {
             NearbyUnits.Clear();
             if (root.TryGetProperty("u", out var u) && u.ValueKind == JsonValueKind.Array)
             {
@@ -42,9 +47,7 @@ public class GameState
                         var posEl = unit[1];
                         float[] pos = [0, 0, 0];
                         if (posEl.ValueKind == JsonValueKind.Array && posEl.GetArrayLength() >= 3)
-                        {
                             pos = [posEl[0].GetSingle(), posEl[1].GetSingle(), posEl[2].GetSingle()];
-                        }
                         NearbyUnits.Add((netId, pos));
                     }
                 }

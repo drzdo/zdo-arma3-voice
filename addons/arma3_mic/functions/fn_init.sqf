@@ -49,13 +49,16 @@ addMissionEventHandler ["EachFrame", {
     // Skip if not connected
     if (("arma3_mic" callExtension "status") == "0") exitWith {};
 
-    // Throttled state push
+    // Player pos + dir every frame (needed for real-time spatial audio)
+    "arma3_mic" callExtension toJSON createHashMapFromArray [
+        ["t", "head"], ["p", getPosASL player], ["d", getDirVisual player]
+    ];
+
+    // Full state with nearby units — throttled
     arma3_mic_frameCount = arma3_mic_frameCount + 1;
     if (arma3_mic_frameCount >= arma3_mic_stateInterval) then {
         arma3_mic_frameCount = 0;
 
-        private _pos = getPosASL player;
-        private _dir = getDirVisual player;
         private _nearby = nearestObjects [player, ["Man"], 50] select {
             alive _x && _x != player
         };
@@ -63,7 +66,7 @@ addMissionEventHandler ["EachFrame", {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
         "arma3_mic" callExtension toJSON createHashMapFromArray [
-            ["t", "state"], ["p", _pos], ["d", _dir], ["u", _units]
+            ["t", "state"], ["u", _units]
         ];
     };
 

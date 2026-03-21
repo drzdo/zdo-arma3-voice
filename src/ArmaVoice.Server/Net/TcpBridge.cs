@@ -22,7 +22,10 @@ public sealed class TcpBridge : IDisposable
 
     public bool IsClientConnected { get; private set; }
 
-    /// <summary>Fired when a state message arrives (JSON with p, d, u fields).</summary>
+    /// <summary>Fired every frame with player pos + dir (for spatial audio).</summary>
+    public Action<JsonElement>? OnHeadReceived { get; set; }
+
+    /// <summary>Fired on throttled state with nearby units.</summary>
     public Action<JsonElement>? OnStateReceived { get; set; }
 
     /// <summary>Fired when an RPC response arrives (id, result as JsonElement).</summary>
@@ -136,6 +139,10 @@ public sealed class TcpBridge : IDisposable
 
                     switch (type)
                     {
+                        case "head":
+                            OnHeadReceived?.Invoke(root);
+                            break;
+
                         case "state":
                             OnStateReceived?.Invoke(root);
                             break;

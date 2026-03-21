@@ -13,16 +13,18 @@ public class CommandExecutor
     private readonly UnitRegistry _unitRegistry;
     private readonly GameState _gameState;
     private readonly CommandRegistry _commandRegistry;
-    private readonly DialogueManager _dialogueManager;
+    private readonly DialogueManager? _dialogueManager;
+    private readonly ILlmClient _llm;
 
     public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState,
-        CommandRegistry commandRegistry, DialogueManager dialogueManager)
+        CommandRegistry commandRegistry, DialogueManager? dialogueManager, ILlmClient llm)
     {
         _rpc = rpc;
         _unitRegistry = unitRegistry;
         _gameState = gameState;
         _commandRegistry = commandRegistry;
         _dialogueManager = dialogueManager;
+        _llm = llm;
     }
 
     public async Task ExecuteAsync(IntentParsed intent, float[] lookTarget)
@@ -32,6 +34,7 @@ public class CommandExecutor
         // Dialogue is special — handled by DialogueManager, not SQF
         if (actionId == "dialogue")
         {
+            if (_dialogueManager == null) { LogCmd("Dialogue", "disabled"); return; }
             var npcNetId = ResolveUnitRef(intent.Target);
             if (npcNetId == null) { LogCmd("Dialogue", $"target \"{intent.Target}\" not found."); return; }
             _dialogueManager.Enqueue(npcNetId, intent.Text ?? "");
@@ -55,7 +58,7 @@ public class CommandExecutor
         // Resolve standard params
         var netIds = await ResolveUnitsAsync(intent.Units);
         var targetNetId = ResolveUnitRef(intent.Target) ?? "";
-        var position = ResolveLocation(intent.Location, lookTarget);
+        var position = await ResolveLocationAsync(intent.Location, lookTarget);
         var stance = intent.Stance ?? "";
         var speed = intent.Speed ?? "";
         var formation = intent.Formation ?? "";
@@ -139,14 +142,72 @@ public class CommandExecutor
 
     // ── Location resolution ──────────────────────────────
 
-    private float[] ResolveLocation(LocationParsed? loc, float[] lookTarget)
+    private async Task<float[]> ResolveLocationAsync(LocationParsed? loc, float[] lookTarget)
     {
         if (loc == null || loc.Type == "look_target") return lookTarget;
         if (loc.Type == "relative" && loc.Distance.HasValue && !string.IsNullOrEmpty(loc.Direction))
             return ComputeRelative(loc.Distance.Value, loc.Direction);
         if (loc.Type == "azimuth" && loc.Distance.HasValue && loc.Azimuth.HasValue)
             return ComputeAzimuth(loc.Distance.Value, loc.Azimuth.Value);
+        if (loc.Type == "marker" && !string.IsNullOrEmpty(loc.Marker))
+            return await ResolveMarkerAsync(loc.Marker) ?? lookTarget;
         return lookTarget;
+    }
+
+    private async Task<float[]?> ResolveMarkerAsync(string playerQuery)
+    {
+        try
+        {
+            // 1. Get all markers from game
+            var markersJson = await _rpc.CallAsync("call zdoArmaMic_fnc_getMarkers");
+            if (string.IsNullOrEmpty(markersJson) || markersJson == "null" || markersJson == "[]")
+            {
+                Log.Warn("Cmd", "No markers on map");
+                return null;
+            }
+
+            // 2. Ask LLM to pick the right marker
+            var prompt = $"""
+                The player said something about a marker: "{playerQuery}"
+                Here are all map markers (format: [markerId, markerDisplayName]):
+                {markersJson}
+
+                Return ONLY the markerId (first element) that best matches what the player said.
+                Return just the string, nothing else. If no match, return "none".
+                """;
+
+            var messages = new List<LlmMessage> { new("user", prompt) };
+            var markerId = await _llm.CompleteAsync("You match marker names. Return only the markerId string.", messages, temperature: 0f, maxTokens: 50);
+
+            if (string.IsNullOrEmpty(markerId) || markerId == "none")
+            {
+                Log.Warn("Cmd", $"LLM could not match marker for: '{playerQuery}'");
+                return null;
+            }
+
+            markerId = markerId.Trim().Trim('"');
+            Log.Info("Cmd", $"Marker resolved: '{playerQuery}' → markerId='{markerId}'");
+
+            // 3. Get marker position
+            var escaped = markerId.Replace("'", "");
+            var posJson = await _rpc.CallAsync($"['{escaped}'] call zdoArmaMic_fnc_getMarkerPos");
+            using var doc = System.Text.Json.JsonDocument.Parse(posJson);
+            var arr = doc.RootElement;
+            if (arr.ValueKind == System.Text.Json.JsonValueKind.Array && arr.GetArrayLength() >= 2)
+            {
+                var pos = new float[] { arr[0].GetSingle(), arr[1].GetSingle(), arr.GetArrayLength() >= 3 ? arr[2].GetSingle() : 0f };
+                Log.Info("Cmd", $"Marker '{markerId}' position: {FmtPos(pos)}");
+                return pos;
+            }
+
+            Log.Warn("Cmd", $"Marker '{markerId}' has no position");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Cmd", $"Marker resolve failed: {ex.Message}");
+            return null;
+        }
     }
 
     private float[] ComputeRelative(float distance, string direction)

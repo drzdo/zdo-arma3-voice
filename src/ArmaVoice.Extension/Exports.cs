@@ -47,6 +47,7 @@ public static class Exports
                     WriteOutput(output, outputSize, Client.IsConnected ? "1" : "0");
                     break;
 
+                case "head":
                 case "state":
                     // Forward entire JSON to server
                     Client.Send(input);

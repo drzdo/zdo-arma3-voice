@@ -1,0 +1,4 @@
+id: holdfire
+description: "Order units to hold fire, do not engage. Triggers: 'hold fire', 'cease fire', 'не стрелять', 'прекратить огонь'."
+sqf: |
+  [_units] call zdoArmaMic_fnc_holdFire;

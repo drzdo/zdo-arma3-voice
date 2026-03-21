@@ -8,7 +8,7 @@ server:
 prompt: ""
 
 stt:
-  system: whisper  # whisper | deepgram
+  system: whisper  # whisper | deepgram | windows
   whisper:
     model_path: ggml-base.en.bin
   deepgram:
@@ -17,6 +17,8 @@ stt:
     language: ru
     encoding: linear16
     sample_rate: 16000
+  windows:
+    language: en-US  # BCP-47 locale: en-US, ru-RU, uk-UA, etc.
 
 tts:
   system: piper  # piper | elevenlabs

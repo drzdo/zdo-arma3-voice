@@ -52,8 +52,11 @@ public class AppConfig
                 if (Stt.Deepgram.SampleRate <= 0)
                     errors.Add("\"stt.deepgram.sample_rate\" is required and must be > 0.");
                 break;
+            case "windows":
+                RequireField(errors, Stt.Windows.Language, "stt.windows.language");
+                break;
             default:
-                errors.Add($"Unknown stt.system: \"{Stt.System}\". Must be \"whisper\" or \"deepgram\".");
+                errors.Add($"Unknown stt.system: \"{Stt.System}\". Must be \"whisper\", \"deepgram\", or \"windows\".");
                 break;
         }
 
@@ -76,7 +79,8 @@ public class AppConfig
 
         // LLM validation
         ValidateLlmInstance(errors, Llm.Intent, "llm.intent");
-        ValidateLlmInstance(errors, Llm.Dialogue, "llm.dialogue");
+        if (Llm.Dialogue.System.ToLowerInvariant() != "none")
+            ValidateLlmInstance(errors, Llm.Dialogue, "llm.dialogue");
 
         if (errors.Count > 0)
         {
@@ -123,6 +127,12 @@ public class SttConfig
     public string System { get; set; } = "whisper";
     public WhisperConfig Whisper { get; set; } = new();
     public DeepgramConfig Deepgram { get; set; } = new();
+    public WindowsSttConfig Windows { get; set; } = new();
+}
+
+public class WindowsSttConfig
+{
+    public string Language { get; set; } = "en-US";
 }
 
 public class WhisperConfig

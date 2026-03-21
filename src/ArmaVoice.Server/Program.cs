@@ -61,6 +61,7 @@ public class Program
                     config.Stt.Deepgram.Language,
                     config.Stt.Deepgram.Encoding,
                     config.Stt.Deepgram.SampleRate),
+                "windows" => new WindowsRecognizer(config.Stt.Windows.Language),
                 _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath),
             };
             Log.Info("Server", $"STT ({config.Stt.System}) ready.");
@@ -98,25 +99,36 @@ public class Program
         };
 
         var intentLlm = CreateLlmClient(config.Llm.Intent);
-        var dialogueLlm = CreateLlmClient(config.Llm.Dialogue);
-
         var intentParser = new IntentParser(intentLlm, commandRegistry.BuildPromptSection(), config.Prompt);
         Log.Info("Server", "IntentParser ready.");
 
-        var npcDialogue = new NpcDialogue(dialogueLlm, config.Prompt);
-        Log.Info("Server", "NpcDialogue ready.");
-
-        // Dialogue manager
-        var dialogueManager = new DialogueManager(
-            npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry);
+        // Dialogue (optional)
+        DialogueManager? dialogueManager = null;
+        if (config.Llm.Dialogue.System.ToLowerInvariant() != "none")
+        {
+            var dialogueLlm = CreateLlmClient(config.Llm.Dialogue);
+            var npcDialogue = new NpcDialogue(dialogueLlm, config.Prompt);
+            dialogueManager = new DialogueManager(
+                npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry);
+            Log.Info("Server", "Dialogue ready.");
+        }
+        else
+        {
+            Log.Info("Server", "Dialogue disabled.");
+        }
 
         // Command executor
-        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, commandRegistry, dialogueManager);
+        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, commandRegistry, dialogueManager, intentLlm);
 
         // Wire up TcpBridge events
+        bridge.OnHeadReceived = headJson =>
+        {
+            gameState.UpdateHead(headJson);
+        };
+
         bridge.OnStateReceived = stateJson =>
         {
-            gameState.UpdateFromState(stateJson);
+            gameState.UpdateState(stateJson);
             unitRegistry.UpdateFromState(gameState.NearbyUnits);
             unitRegistry.EvictStale(maxAge: 300);
         };
@@ -231,7 +243,7 @@ public class Program
         };
 
         // Start dialogue manager in background
-        var dialogueTask = dialogueManager.RunAsync(cts.Token);
+        var dialogueTask = dialogueManager?.RunAsync(cts.Token);
 
         // Periodic squad re-sync
         _ = Task.Run(async () =>
@@ -259,8 +271,11 @@ public class Program
             audioPlayer.Dispose();
         }
 
-        try { await dialogueTask; }
-        catch (OperationCanceledException) { }
+        if (dialogueTask != null)
+        {
+            try { await dialogueTask; }
+            catch (OperationCanceledException) { }
+        }
 
         Log.Info("Server", "Shut down.");
     }

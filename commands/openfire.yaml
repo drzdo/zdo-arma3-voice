@@ -1,0 +1,4 @@
+id: openfire
+description: "Allow units to engage freely. Triggers: 'open fire', 'weapons free', 'fire at will', 'огонь', 'разрешаю стрелять'."
+sqf: |
+  [_units] call zdoArmaMic_fnc_openFire;

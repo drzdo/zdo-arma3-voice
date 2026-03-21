@@ -1,0 +1,4 @@
+id: mountvehicle
+description: "Get in the nearest vehicle at look target in a specific role. LLM must set 'formation' field to the role: 'driver', 'gunner', 'commander', 'cargo', or 'any'. Triggers: 'get in as driver', 'садись за руль', 'be the gunner', 'на место стрелка'. If no role specified, use 'any'."
+sqf: |
+  [_units, _pos, _formation] call zdoArmaMic_fnc_moveInVehicle;

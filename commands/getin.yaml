@@ -1,0 +1,4 @@
+id: getin
+description: "Get in the vehicle at the look target position. Triggers: 'get in', 'mount up', 'садись', 'в машину', 'загружайтесь'."
+sqf: |
+  [_units, _pos] call zdoArmaMic_fnc_getIn;
