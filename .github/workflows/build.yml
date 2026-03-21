@@ -47,17 +47,18 @@ jobs:
       - name: Pack PBO
         run: ./hemtt.exe build
 
-      - name: Upload Extension DLL
-        uses: actions/upload-artifact@v4
-        with:
-          name: arma3-mic-extension
-          path: publish/extension/arma3_mic_x64.dll
+      - name: Package mod
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package/@arma3_mic/addons
+          Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
+          Copy-Item .hemttout/build/addons/arma3_mic.pbo package/@arma3_mic/addons/
 
-      - name: Upload PBO
+      - name: Upload Mod
         uses: actions/upload-artifact@v4
         with:
-          name: arma3-mic-pbo
-          path: .hemttout/build/addons/arma3_mic.pbo
+          name: '@arma3_mic'
+          path: package/@arma3_mic/
 
       - name: Upload Server
         uses: actions/upload-artifact@v4
