@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ArmaVoice.Server.Ai;
 
@@ -19,29 +20,40 @@ public class GeminiLlmClient : ILlmClient
 
     public async Task<string?> CompleteAsync(string systemPrompt, List<LlmMessage> messages, float temperature = 0.1f, int maxTokens = 300)
     {
-        var contents = messages.Select(m => new
+        var contents = new JsonArray();
+        foreach (var m in messages)
         {
-            role = m.Role == "assistant" ? "model" : "user",
-            parts = new[] { new { text = m.Content } }
-        }).ToArray();
+            contents.Add(new JsonObject
+            {
+                ["role"] = m.Role == "assistant" ? "model" : "user",
+                ["parts"] = new JsonArray { new JsonObject { ["text"] = m.Content } }
+            });
+        }
 
-        object generationConfig = _thinkingBudget > 0
-            ? new { temperature, maxOutputTokens = maxTokens, thinkingConfig = new { thinkingBudget = _thinkingBudget } }
-            : new { temperature, maxOutputTokens = maxTokens };
-
-        var requestBody = new
+        var genConfig = new JsonObject
         {
-            system_instruction = new { parts = new[] { new { text = systemPrompt } } },
-            contents,
-            generationConfig
+            ["temperature"] = temperature,
+            ["maxOutputTokens"] = maxTokens
+        };
+        if (_thinkingBudget > 0)
+            genConfig["thinkingConfig"] = new JsonObject { ["thinkingBudget"] = _thinkingBudget };
+
+        var requestBody = new JsonObject
+        {
+            ["system_instruction"] = new JsonObject
+            {
+                ["parts"] = new JsonArray { new JsonObject { ["text"] = systemPrompt } }
+            },
+            ["contents"] = contents,
+            ["generationConfig"] = genConfig
         };
 
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
         try
         {
-            var json = JsonSerializer.Serialize(requestBody);
-            var response = await _http.PostAsync(url, new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
+            var response = await _http.PostAsync(url,
+                new StringContent(requestBody.ToJsonString(), System.Text.Encoding.UTF8, "application/json"));
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

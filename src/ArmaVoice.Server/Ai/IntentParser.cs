@@ -70,18 +70,20 @@ public class UnitSummary
     public string UnitType { get; set; } = "";
 }
 
+// ── Source-generated JSON context (trim/AOT safe) ────────
+
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+[JsonSerializable(typeof(IntentParsed))]
+internal partial class IntentJsonContext : JsonSerializerContext;
+
 // ── Parser ───────────────────────────────────────────────
 
 public class IntentParser
 {
     private readonly ILlmClient _llm;
     private readonly string _commandPromptSection;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
 
     public IntentParser(ILlmClient llm, string commandPromptSection)
     {
@@ -154,7 +156,7 @@ public class IntentParser
                 textResponse = textResponse[..^3];
             textResponse = textResponse.Trim();
 
-            var intent = JsonSerializer.Deserialize<IntentParsed>(textResponse, JsonOptions);
+            var intent = JsonSerializer.Deserialize(textResponse, IntentJsonContext.Default.IntentParsed);
             Console.WriteLine($"[IntentParser] action={intent?.Action} units=[{string.Join(",", intent?.Units ?? [])}] location={intent?.Location?.Type} target={intent?.Target} stance={intent?.Stance} speed={intent?.Speed}");
             return intent;
         }

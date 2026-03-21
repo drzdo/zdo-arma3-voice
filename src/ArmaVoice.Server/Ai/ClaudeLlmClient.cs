@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ArmaVoice.Server.Ai;
 
@@ -17,20 +18,25 @@ public class ClaudeLlmClient : ILlmClient
 
     public async Task<string?> CompleteAsync(string systemPrompt, List<LlmMessage> messages, float temperature = 0.1f, int maxTokens = 300)
     {
-        var requestBody = new
+        var msgsArray = new JsonArray();
+        foreach (var m in messages)
         {
-            model = _model,
-            max_tokens = maxTokens,
-            system = systemPrompt,
-            messages = messages.Select(m => new { role = m.Role, content = m.Content }).ToArray()
+            msgsArray.Add(new JsonObject { ["role"] = m.Role, ["content"] = m.Content });
+        }
+
+        var requestBody = new JsonObject
+        {
+            ["model"] = _model,
+            ["max_tokens"] = maxTokens,
+            ["system"] = systemPrompt,
+            ["messages"] = msgsArray
         };
 
         try
         {
-            var json = JsonSerializer.Serialize(requestBody);
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages")
             {
-                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                Content = new StringContent(requestBody.ToJsonString(), System.Text.Encoding.UTF8, "application/json")
             };
             request.Headers.Add("x-api-key", _apiKey);
             request.Headers.Add("anthropic-version", "2023-06-01");

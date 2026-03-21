@@ -204,7 +204,8 @@ public class Program
 
             _ = Task.Run(async () =>
             {
-                await Task.Delay(1000);
+                // Wait for spawned compileFinal calls to finish in SQF
+                await Task.Delay(3000);
                 await unitRegistry.SyncSquadAsync();
             });
         };

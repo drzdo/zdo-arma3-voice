@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ArmaVoice.Server.Speech;
 
@@ -47,24 +47,24 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
 
         var url = $"https://api.elevenlabs.io/v1/text-to-speech/{voiceId}";
 
-        var requestBody = JsonSerializer.Serialize(new
+        var requestBody = new JsonObject
         {
-            text,
-            model_id = _modelId,
-            voice_settings = new
+            ["text"] = text,
+            ["model_id"] = _modelId,
+            ["voice_settings"] = new JsonObject
             {
-                stability = _stability,
-                similarity_boost = _similarityBoost,
-                style = _style,
-                use_speaker_boost = _useSpeakerBoost
+                ["stability"] = _stability,
+                ["similarity_boost"] = _similarityBoost,
+                ["style"] = _style,
+                ["use_speaker_boost"] = _useSpeakerBoost
             }
-        });
+        };
 
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
+                Content = new StringContent(requestBody.ToJsonString(), Encoding.UTF8, "application/json")
             };
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("audio/mpeg"));
 

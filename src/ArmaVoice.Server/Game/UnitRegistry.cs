@@ -136,7 +136,13 @@ public class UnitRegistry
     {
         try
         {
-            var result = await _rpc.CallAsync("call arma3_mic_fnc_getSquad");
+            var result = await _rpc.CallAsync("call zdoArmaMic_fnc_getSquad");
+
+            if (string.IsNullOrEmpty(result) || result == "null")
+            {
+                Console.WriteLine("[UnitRegistry] Squad sync: no data (function not ready yet?)");
+                return;
+            }
 
             // Result is JSON: [["netId","name","side","type",rank,[x,y,z],"team"], ...]
             using var doc = JsonDocument.Parse(result);
@@ -223,8 +229,10 @@ public class UnitRegistry
     {
         try
         {
-            var sqf = $"'{netId}' call arma3_mic_fnc_getUnitInfo";
+            var sqf = $"'{netId}' call zdoArmaMic_fnc_getUnitInfo";
             var result = await _rpc.CallAsync(sqf);
+
+            if (string.IsNullOrEmpty(result) || result == "null") return;
 
             // Result is JSON: ["name","side",sameGroup,"type",rank]
             using var doc = JsonDocument.Parse(result);
