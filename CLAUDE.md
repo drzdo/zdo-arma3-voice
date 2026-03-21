@@ -31,6 +31,7 @@ Builds on macOS (IL only). NativeAOT publish (`dotnet publish`) requires Windows
   - **CRITICAL**: The array form syntax is `["function", argumentsArray]` — the second element MUST be an array of arguments. `["fn", singleArg]` is WRONG, must be `["fn", [singleArg]]`. This is the most common mistake.
   - All argument elements are auto-converted to strings by the engine.
 - **`callExtension` export names (64-bit)**: Use plain names `RVExtension`, `RVExtensionArgs`, `RVExtensionVersion` — NO underscore prefix, NO `@N` stdcall decoration. Decorated names (`_RVExtension@12`) are 32-bit only.
+- **`callExtension` argument quoting**: SQF wraps string arguments in literal `"` quotes when passing to `RVExtensionArgs`. The C# extension strips these globally in `ReadArgs`. If adding new argument handling, this is already taken care of — args arrive clean.
 - **`compileFinal`**: Compiles SQF once, result is immutable. Used to register server-pushed functions (`arma3_mic_fnc_*`). Re-register on reconnect.
 - **`parseSimpleArray`**: Parses SQF array literals from strings. Used to parse poll responses from extension.
 - **`str`** output for arrays/numbers is close enough to JSON for our protocol. No conversion needed in the extension.

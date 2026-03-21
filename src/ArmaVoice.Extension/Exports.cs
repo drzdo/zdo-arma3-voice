@@ -110,7 +110,13 @@ public static class Exports
         var args = new string[argc];
         var ptrs = (nint*)argv;
         for (int i = 0; i < argc; i++)
-            args[i] = ReadString(ptrs[i]);
+        {
+            var s = ReadString(ptrs[i]);
+            // SQF wraps string arguments in quotes when converting for callExtension
+            if (s.Length >= 2 && s[0] == '"' && s[^1] == '"')
+                s = s[1..^1];
+            args[i] = s;
+        }
         return args;
     }
 }
