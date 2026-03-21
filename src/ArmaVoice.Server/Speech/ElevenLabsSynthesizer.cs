@@ -93,9 +93,19 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
     /// </summary>
     private string? ResolveVoiceId(SpeechContext? context)
     {
-        // 1. Exact unit name match
-        if (context?.UnitName != null && _voices.TryGetValue(context.UnitName, out var byName))
-            return byName;
+        // 1. Unit name match — exact first, then contains (e.g. "Braun" matches "Sgt. Braun")
+        if (context?.UnitName != null)
+        {
+            if (_voices.TryGetValue(context.UnitName, out var byExact))
+                return byExact;
+
+            foreach (var (key, voiceId) in _voices)
+            {
+                if (key is "default" or "blufor" or "opfor" or "indfor" or "civilian") continue;
+                if (context.UnitName.Contains(key, StringComparison.OrdinalIgnoreCase))
+                    return voiceId;
+            }
+        }
 
         // 2. Side match (SQF sides: WEST=blufor, EAST=opfor, GUER=indfor, CIV=civilian)
         if (context?.Side != null)
