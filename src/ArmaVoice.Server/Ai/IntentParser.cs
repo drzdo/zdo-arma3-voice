@@ -113,8 +113,10 @@ public class IntentParser
               - Return netIds from the known units list above when you can identify the unit.
               - "all" = entire squad.
               - Team color names: "red","green","blue","yellow" = Arma team colors.
-              - If the player says "second" or "unit 2", find the 2nd unit in the list where sameGroup=true and return its netId.
-              - If the player says a name like "Miller", find the matching unit and return its netId.
+              - Team numbers map to colors: group/team 1 = "red", 2 = "green", 3 = "blue", 4 = "yellow".
+                This applies in any language: "группа 1" = "red", "team 2" = "green".
+              - If the player says "second"/"третий"/ordinal, find the Nth unit in the list where sameGroup=true and return its netId.
+              - If the player says a name like "Miller"/"Петрович", find the matching unit and return its netId.
               - If you cannot match to a known unit, return the name as-is (the server will fuzzy-match).
               - Default to ["all"] if not specified.
 
@@ -144,18 +146,28 @@ public class IntentParser
             - Omit null/absent fields.
             - Use SQF constants for formation/stance/speed (uppercase as shown above).
             - Prefer returning netIds over names for units and targets.
+            - "dialogue" is ONLY for asking questions or making conversation (e.g. "Miller, what do you see?").
+              Commands like "come to me", "go there", "hold" are NEVER dialogue, even if addressed by name informally.
+              "Слышь Петрович иди ко мне" = regroup, NOT dialogue. "Петрович, что видишь?" = dialogue.
+            - The player may use informal/colloquial speech, filler words ("слышь","ну","а ну-ка","давай").
+              Ignore filler, extract the actual command.
             """ +
             """
 
             === EXAMPLES ===
-            {"action":"move","units":["2:3","2:7"],"location":{"type":"look_target"},"stance":"DOWN","speed":"FULL"}
-            {"action":"move","units":["2:3"],"location":{"type":"relative","distance":100,"direction":"forward"},"stance":"MIDDLE"}
-            {"action":"move","units":["all"],"location":{"type":"azimuth","distance":200,"azimuth":320}}
-            {"action":"attack","units":["all"],"target":"2:10"}
-            {"action":"regroup","units":["all"]}
-            {"action":"hold","units":["2:3","2:7"],"stance":"DOWN"}
-            {"action":"formation","units":["all"],"formation":"WEDGE"}
-            {"action":"dialogue","target":"2:3","text":"what's the situation ahead?"}
+            Speech: "second and third, move to that tree" -> {"action":"move","units":["2:3","2:7"],"location":{"type":"look_target"}}
+            Speech: "Miller, move 100 meters forward, crouched" -> {"action":"move","units":["2:3"],"location":{"type":"relative","distance":100,"direction":"forward"},"stance":"MIDDLE"}
+            Speech: "everyone move 200 meters azimuth 320" -> {"action":"move","units":["all"],"location":{"type":"azimuth","distance":200,"azimuth":320}}
+            Speech: "attack that guy" -> {"action":"attack","units":["all"],"target":"2:10"}
+            Speech: "regroup" -> {"action":"regroup","units":["all"]}
+            Speech: "second and fifth, hold, prone" -> {"action":"hold","units":["2:3","2:7"],"stance":"DOWN"}
+            Speech: "wedge formation" -> {"action":"formation","units":["all"],"formation":"WEDGE"}
+            Speech: "Miller, what's the situation?" -> {"action":"dialogue","target":"2:3","text":"what's the situation?"}
+            Speech: "третий пятый второй иди к тому дереву" -> {"action":"move","units":["2:5","2:9","2:3"],"location":{"type":"look_target"}}
+            Speech: "группа 1 иди к этому дому" -> {"action":"move","units":["red"],"location":{"type":"look_target"}}
+            Speech: "петрович иди туда" -> {"action":"move","units":["2:4"],"location":{"type":"look_target"}}
+            Speech: "слышь петрович а ну ка иди ко мне" -> {"action":"regroup","units":["2:4"]}
+            Speech: "Петрович, що бачиш попереду?" -> {"action":"dialogue","target":"2:4","text":"що бачиш попереду?"}
             """;
 
         var requestBody = new

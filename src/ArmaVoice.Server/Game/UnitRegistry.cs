@@ -127,7 +127,67 @@ public class UnitRegistry
     }
 
     /// <summary>
-    /// Remove units that haven't been seen for the given number of frames.
+    /// Sync the full squad roster via RPC. Call on connect and periodically.
+    /// Returns all squad members regardless of distance.
+    /// </summary>
+    public async Task SyncSquadAsync()
+    {
+        try
+        {
+            var result = await _rpc.CallAsync("call arma3_mic_fnc_getSquad");
+            var parsed = SqfParser.Parse(result);
+            if (parsed is not List<object> arr)
+            {
+                Console.WriteLine($"[UnitRegistry] Failed to parse squad data: {result[..Math.Min(80, result.Length)]}");
+                return;
+            }
+
+            lock (_lock)
+            {
+                foreach (var item in arr)
+                {
+                    if (item is not List<object> unit || unit.Count < 7) continue;
+
+                    var netId = unit[0]?.ToString() ?? "";
+                    if (string.IsNullOrEmpty(netId)) continue;
+
+                    if (!_units.TryGetValue(netId, out var info))
+                    {
+                        info = new UnitInfo { NetId = netId };
+                        _units[netId] = info;
+                    }
+
+                    info.Name = unit[1]?.ToString() ?? "";
+                    info.Side = unit[2]?.ToString() ?? "";
+                    info.SameGroup = true;
+                    info.UnitType = unit[3]?.ToString() ?? "";
+                    info.Rank = unit[4] switch { double d => (int)d, int i => i, _ => 0 };
+
+                    if (unit[5] is List<object> posArr && posArr.Count >= 3)
+                    {
+                        info.Position = [
+                            posArr[0] is double px ? (float)px : 0f,
+                            posArr[1] is double py ? (float)py : 0f,
+                            posArr[2] is double pz ? (float)pz : 0f
+                        ];
+                    }
+
+                    info.InfoLoaded = true;
+                    info.LastSeenFrame = _frameCounter;
+                }
+            }
+
+            Console.WriteLine($"[UnitRegistry] Squad synced: {arr.Count} members.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UnitRegistry] Squad sync failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Remove non-squad units that haven't been seen for the given number of frames.
+    /// Squad members (SameGroup=true) are never evicted.
     /// </summary>
     public void EvictStale(int maxAge)
     {
@@ -136,6 +196,9 @@ public class UnitRegistry
             var staleIds = new List<string>();
             foreach (var (netId, info) in _units)
             {
+                // Never evict squad members
+                if (info.SameGroup) continue;
+
                 if (_frameCounter - info.LastSeenFrame > maxAge)
                 {
                     staleIds.Add(netId);

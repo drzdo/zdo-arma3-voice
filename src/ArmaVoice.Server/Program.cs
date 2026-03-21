@@ -202,6 +202,13 @@ public class Program
         {
             Console.WriteLine("[Server] Client connected — registering SQF functions...");
             SqfFunctions.RegisterAll(rpcClient);
+
+            // Sync squad after a short delay (let functions register first)
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                await unitRegistry.SyncSquadAsync();
+            });
         };
 
         // Graceful shutdown
@@ -216,6 +223,17 @@ public class Program
 
         // Start dialogue manager in background
         Task? dialogueTask = dialogueManager?.RunAsync(cts.Token);
+
+        // Periodic squad re-sync (every 30s)
+        _ = Task.Run(async () =>
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                await Task.Delay(5_000, cts.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                if (bridge.IsClientConnected)
+                    await unitRegistry.SyncSquadAsync();
+            }
+        });
 
         // Start the TCP bridge (blocks until cancellation)
         try

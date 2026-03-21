@@ -37,6 +37,9 @@ public static class SqfFunctions
 
         ["arma3_mic_fnc_getTeamMembers"] =
             """params ["_team"]; str (units group player select { assignedTeam _x == _team } apply { _x call BIS_fnc_netId })""",
+
+        ["arma3_mic_fnc_getSquad"] =
+            """str ((units group player - [player]) apply { [_x call BIS_fnc_netId, name _x, str side _x, typeOf _x, rankId _x, getPosASL _x, assignedTeam _x] })""",
     };
 
     /// <summary>
