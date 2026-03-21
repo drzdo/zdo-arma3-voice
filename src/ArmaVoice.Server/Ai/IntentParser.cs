@@ -105,7 +105,7 @@ public class IntentParser
 
             === JSON SCHEMA ===
 
-            action (required, string): one of "move","attack","hold","regroup","formation","dialogue"
+            action (required, string): one of "move","attack","stop","hold","drop","regroup","formation","dialogue"
 
             units (required, array of strings): WHO should execute.
               - Return netIds from the known units list above when you can identify the unit.
@@ -117,6 +117,16 @@ public class IntentParser
               - If the player says a name like "Miller"/"Петрович", find the matching unit and return its netId.
               - If you cannot match to a known unit, return the name as-is (the server will fuzzy-match).
               - Default to ["all"] if not specified.
+
+            Action descriptions:
+            - "move" — move to a location. Needs "location".
+            - "attack" — engage a target. Needs "target".
+            - "stop" — cancel current action, stay put, remain responsive to new orders. "stop","freeze","halt","стой","замри".
+            - "hold" — stop and LOCK position, won't move until new orders. "hold position","держать позицию".
+            - "drop" — go prone immediately. "hit the dirt","get down","ложись","на землю".
+            - "regroup" — come back to player. "regroup","come to me","ко мне","перегруппировка".
+            - "formation" — change formation. Needs "formation".
+            - "dialogue" — talk to NPC. Needs "target" and "text".
 
             location (optional, object): WHERE. Only for "move" action.
               type="look_target" — player said "there","that position","here". No other fields needed.
@@ -166,6 +176,10 @@ public class IntentParser
             Speech: "петрович иди туда" -> {"action":"move","units":["2:4"],"location":{"type":"look_target"}}
             Speech: "слышь петрович а ну ка иди ко мне" -> {"action":"regroup","units":["2:4"]}
             Speech: "Петрович, що бачиш попереду?" -> {"action":"dialogue","target":"2:4","text":"що бачиш попереду?"}
+            Speech: "freeze!" -> {"action":"stop","units":["all"]}
+            Speech: "стой!" -> {"action":"stop","units":["all"]}
+            Speech: "hit the dirt!" -> {"action":"drop","units":["all"]}
+            Speech: "ложись!" -> {"action":"drop","units":["all"]}
             """;
 
         try

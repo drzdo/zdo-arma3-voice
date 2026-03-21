@@ -20,6 +20,9 @@ public static class SqfFunctions
         ["arma3_mic_fnc_attackTarget"] =
             """params ["_netIds", "_targetNetId"]; private _t = objectFromNetId _targetNetId; { (objectFromNetId _x) doFire _t } forEach _netIds; "ok" """,
 
+        ["arma3_mic_fnc_stop"] =
+            """params ["_netIds"]; { doStop (objectFromNetId _x) } forEach _netIds; "ok" """,
+
         ["arma3_mic_fnc_holdPosition"] =
             """params ["_netIds"]; { private _u = objectFromNetId _x; doStop _u; _u disableAI "MOVE" } forEach _netIds; "ok" """,
 

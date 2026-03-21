@@ -43,10 +43,22 @@ public class CommandExecutor
                 Log("Attack", $"{string.Join(",", netIds)} → {targetNetId}");
                 break;
 
+            case "stop":
+                if (netIds.Count == 0) { Log("Stop", "no units resolved."); break; }
+                _rpc.Fire($"[[{FmtIds(netIds)}]] call arma3_mic_fnc_stop");
+                Log("Stop", string.Join(",", netIds));
+                break;
+
             case "hold":
                 if (netIds.Count == 0) { Log("Hold", "no units resolved."); break; }
                 _rpc.Fire($"[[{FmtIds(netIds)}]] call arma3_mic_fnc_holdPosition");
                 Log("Hold", string.Join(",", netIds));
+                break;
+
+            case "drop":
+                if (netIds.Count == 0) { Log("Drop", "no units resolved."); break; }
+                _rpc.Fire($"[[{FmtIds(netIds)}], 'DOWN'] call arma3_mic_fnc_setStance");
+                Log("Drop", string.Join(",", netIds));
                 break;
 
             case "regroup":

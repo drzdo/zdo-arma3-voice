@@ -25,7 +25,12 @@ Builds on macOS (IL only). NativeAOT publish (`dotnet publish`) requires Windows
 ### SQF gotchas
 
 - **Operator precedence**: All SQF binary operators evaluate **right-to-left**. Always parenthesize `callExtension` before comparing: `("ext" callExtension "cmd") == "value"`, NOT `"ext" callExtension "cmd" == "value"` (the latter compares first, then passes the bool to callExtension).
-- **`callExtension` return types**: Simple form (`ext callExtension "fn"`) returns String. Array form (`ext callExtension ["fn", args...]`) returns Array `[result, returnCode, errorCode]`. Fire-and-forget calls can discard the array return.
+- **`callExtension` forms**:
+  - Simple: `ext callExtension "fn"` → returns String.
+  - Array: `ext callExtension ["fn", [arg1, arg2, ...]]` → returns `[result, returnCode, errorCode]`.
+  - **CRITICAL**: The array form syntax is `["function", argumentsArray]` — the second element MUST be an array of arguments. `["fn", singleArg]` is WRONG, must be `["fn", [singleArg]]`. This is the most common mistake.
+  - All argument elements are auto-converted to strings by the engine.
+- **`callExtension` export names (64-bit)**: Use plain names `RVExtension`, `RVExtensionArgs`, `RVExtensionVersion` — NO underscore prefix, NO `@N` stdcall decoration. Decorated names (`_RVExtension@12`) are 32-bit only.
 - **`compileFinal`**: Compiles SQF once, result is immutable. Used to register server-pushed functions (`arma3_mic_fnc_*`). Re-register on reconnect.
 - **`parseSimpleArray`**: Parses SQF array literals from strings. Used to parse poll responses from extension.
 - **`str`** output for arrays/numbers is close enough to JSON for our protocol. No conversion needed in the extension.

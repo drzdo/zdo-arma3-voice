@@ -16,7 +16,7 @@ arma3_mic_frameCount = 0;
     } else {
         screenToWorld [0.5, 0.5]
     };
-    "arma3_mic" callExtension ["ptt", "down", str _lookPos];
+    "arma3_mic" callExtension ["ptt", ["down", str _lookPos]];
 },
 {
     // Key up
@@ -25,18 +25,19 @@ arma3_mic_frameCount = 0;
     } else {
         screenToWorld [0.5, 0.5]
     };
-    "arma3_mic" callExtension ["ptt", "up", str _lookPos];
+    "arma3_mic" callExtension ["ptt", ["up", str _lookPos]];
 },
 [0xC7, [false, false, false]]] call CBA_fnc_addKeybind;
 // Default: Home key, no modifiers
 
 // Check if extension is loaded
-private _ver = "arma3_mic" callExtension "version";
+private _ver = "arma3_mic" callExtension "status";
 if (_ver == "") then {
     diag_log "ArmaVoice: ERROR — extension arma3_mic_x64.dll not loaded!";
     systemChat "ArmaVoice: extension NOT loaded — check that arma3_mic_x64.dll is in the mod folder";
 } else {
-    diag_log format ["ArmaVoice: extension loaded, version %1", _ver];
+    diag_log "ArmaVoice: extension loaded";
+    systemChat "ArmaVoice: extension loaded";
 };
 
 // Per-frame handler — state push + RPC poll
@@ -58,7 +59,7 @@ addMissionEventHandler ["EachFrame", {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
         private _stateStr = str [_pos, _dir, _units];
-        "arma3_mic" callExtension ["state", _stateStr];
+        "arma3_mic" callExtension ["state", [_stateStr]];
     };
 
     // Poll for inbound RPC (every frame)
@@ -66,7 +67,7 @@ addMissionEventHandler ["EachFrame", {
     if (_cmd != "") then {
         (parseSimpleArray _cmd) params ["_id", "_sqf"];
         private _result = call compile _sqf;
-        "arma3_mic" callExtension ["respond", _id, str _result];
+        "arma3_mic" callExtension ["respond", [_id, str _result]];
     };
 }];
 
@@ -75,7 +76,7 @@ addMissionEventHandler ["EachFrame", {
     while {true} do {
         if (("arma3_mic" callExtension "status") == "0") then {
             private _addr = arma3_mic_serverHost + ":" + str (round arma3_mic_serverPort);
-            "arma3_mic" callExtension ["connect", _addr];
+            "arma3_mic" callExtension ["connect", [_addr]];
             systemChat format ["ArmaVoice: connecting to %1...", _addr];
         } else {
             // Connected — check once, log on first connect

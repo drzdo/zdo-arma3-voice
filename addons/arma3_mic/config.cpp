@@ -1,8 +1,8 @@
 class CfgPatches {
     class arma3_mic {
-        name = "ArmaVoice";
-        author = "ArmaVoice";
-        url = "";
+        name = "Zdo Arma Microphone";
+        author = "drzdo";
+        url = "https://github.com/drzdo/arma3-mic";
         units[] = {};
         weapons[] = {};
         requiredVersion = 2.14;
