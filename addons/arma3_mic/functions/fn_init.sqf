@@ -74,11 +74,14 @@ addMissionEventHandler ["EachFrame", {
         private _id = _msg get "id";
         private _sqf = _msg get "sqf";
         if (_id == 0) then {
-            // Fire-and-forget — execute directly (compileFinal is safe in unscheduled)
+            // Fire-and-forget — execute directly
+            diag_log format ["ArmaVoice RPC fire: %1", _sqf select [0, 80]];
             call compile _sqf;
         } else {
             // RPC with response expected
+            diag_log format ["ArmaVoice RPC call (id=%1): %2", _id, _sqf select [0, 80]];
             private _result = call compile _sqf;
+            diag_log format ["ArmaVoice RPC result (id=%1): %2", _id, str _result select [0, 80]];
             "arma3_mic" callExtension toJSON createHashMapFromArray [
                 ["t", "rpc"], ["id", _id], ["r", _result]
             ];
