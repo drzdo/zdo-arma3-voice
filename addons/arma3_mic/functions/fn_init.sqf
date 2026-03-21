@@ -67,15 +67,15 @@ addMissionEventHandler ["EachFrame", {
         ];
     };
 
-    // Poll for inbound RPC (every frame)
+    // Poll ALL inbound RPCs (drain queue each frame)
     private _cmd = "arma3_mic" callExtension "poll";
-    if (_cmd != "") then {
+    while {_cmd != ""} do {
         private _msg = fromJSON _cmd;
         private _id = _msg get "id";
         private _sqf = _msg get "sqf";
         if (_id == 0) then {
-            // Fire-and-forget (function registration etc) — spawn to avoid stack issues
-            [_sqf] spawn { call compile (_this select 0) };
+            // Fire-and-forget — execute directly (compileFinal is safe in unscheduled)
+            call compile _sqf;
         } else {
             // RPC with response expected
             private _result = call compile _sqf;
@@ -83,6 +83,7 @@ addMissionEventHandler ["EachFrame", {
                 ["t", "rpc"], ["id", _id], ["r", _result]
             ];
         };
+        _cmd = "arma3_mic" callExtension "poll";
     };
 }];
 

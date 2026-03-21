@@ -204,8 +204,18 @@ public class Program
 
             _ = Task.Run(async () =>
             {
-                // Wait for spawned compileFinal calls to finish in SQF
-                await Task.Delay(3000);
+                // Wait until functions are compiled in SQF
+                for (int i = 0; i < 20; i++)
+                {
+                    await Task.Delay(1000);
+                    try
+                    {
+                        var test = await rpcClient.CallAsync("!isNil 'zdoArmaMic_fnc_getSquad'");
+                        if (test == "true") break;
+                        Console.WriteLine("[Server] Waiting for SQF functions to compile...");
+                    }
+                    catch { }
+                }
                 await unitRegistry.SyncSquadAsync();
             });
         };
