@@ -65,7 +65,18 @@ Unit resolution supports: team colors (via SQF RPC), squad index, name fuzzy mat
 
 ### Config
 
-All server config in `config.yaml` (gitignored). Template in `config.yaml.example`. Keys: server port, whisper model path, piper URL, Gemini API key, Claude API key.
+All server config in `config.yaml` (gitignored). Template in `config.yaml.example`.
+
+**Rules:**
+- Every time a new config field is added, it MUST also be added to `config.yaml.example`.
+- No default values for API keys, voice IDs, model IDs — these must be set explicitly in config.
+- Config validation runs on startup. Missing required fields cause a clear error and exit.
+
+**STT/TTS are pluggable** via `stt.system` and `tts.system` fields:
+- STT: `whisper` (local, Whisper.net) or `deepgram` (cloud API)
+- TTS: `piper` (local HTTP server) or `elevenlabs` (cloud API)
+- Each system has its own config block under `stt.*` / `tts.*`
+- Interfaces: `ISpeechRecognizer`, `ISpeechSynthesizer` — add new impls by implementing these.
 
 ### Deployment
 

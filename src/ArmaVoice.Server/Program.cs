@@ -26,8 +26,8 @@ public class Program
         var config = AppConfig.Load(configPath);
 
         Console.WriteLine($"[Server] Port: {config.Server.Port}");
-        Console.WriteLine($"[Server] Whisper model: {config.Whisper.ModelPath}");
-        Console.WriteLine($"[Server] Piper URL: {config.Piper.Url}");
+        Console.WriteLine($"[Server] STT: {config.Stt.System}");
+        Console.WriteLine($"[Server] TTS: {config.Tts.System}");
         Console.WriteLine($"[Server] Gemini API key: {(string.IsNullOrEmpty(config.Gemini.ApiKey) ? "NOT SET" : "***")}");
         Console.WriteLine($"[Server] Claude API key: {(string.IsNullOrEmpty(config.Claude.ApiKey) ? "NOT SET" : "***")}");
 
@@ -37,20 +37,35 @@ public class Program
         var gameState = new GameState();
         var unitRegistry = new UnitRegistry(rpcClient);
 
-        // Speech
-        SpeechRecognizer? speechRecognizer = null;
+        // STT
+        ISpeechRecognizer? speechRecognizer = null;
         try
         {
-            speechRecognizer = new SpeechRecognizer(config.Whisper.ModelPath);
-            Console.WriteLine("[Server] SpeechRecognizer ready.");
+            speechRecognizer = config.Stt.System.ToLowerInvariant() switch
+            {
+                "deepgram" => new DeepgramRecognizer(
+                    config.Stt.Deepgram.ApiKey,
+                    config.Stt.Deepgram.Model,
+                    config.Stt.Deepgram.Language),
+                _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath),
+            };
+            Console.WriteLine($"[Server] STT ({config.Stt.System}) ready.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Server] SpeechRecognizer unavailable: {ex.Message}");
+            Console.WriteLine($"[Server] STT unavailable: {ex.Message}");
         }
 
         // TTS
-        var tts = new SpeechSynthesizer(config.Piper.Url);
+        ISpeechSynthesizer tts = config.Tts.System.ToLowerInvariant() switch
+        {
+            "elevenlabs" => new ElevenLabsSynthesizer(
+                config.Tts.ElevenLabs.ApiKey,
+                config.Tts.ElevenLabs.ModelId,
+                config.Tts.ElevenLabs.Voices),
+            _ => new PiperSynthesizer(config.Tts.Piper.Url),
+        };
+        Console.WriteLine($"[Server] TTS ({config.Tts.System}) ready.");
 
         // Audio
         var audioPlayer = new AudioPlayer();
@@ -207,6 +222,7 @@ public class Program
         {
             bridge.Dispose();
             speechRecognizer?.Dispose();
+            (tts as IDisposable)?.Dispose();
             audioPlayer.Dispose();
         }
 

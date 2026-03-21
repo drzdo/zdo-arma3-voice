@@ -7,7 +7,7 @@ namespace ArmaVoice.Server.Speech;
 /// Uses Whisper.net for speech-to-text. Records from microphone using NAudio,
 /// transcribes with Whisper. Expected audio format: 16kHz, 16-bit, mono.
 /// </summary>
-public class SpeechRecognizer : IDisposable
+public class WhisperRecognizer : ISpeechRecognizer
 {
     private WhisperProcessor? _processor;
     private WaveInEvent? _waveIn;
@@ -15,7 +15,7 @@ public class SpeechRecognizer : IDisposable
     private bool _recording;
     private readonly object _lock = new();
 
-    public SpeechRecognizer(string modelPath = "ggml-base.en.bin")
+    public WhisperRecognizer(string modelPath = "ggml-base.en.bin")
     {
         var factory = WhisperFactory.FromPath(modelPath);
         _processor = factory.CreateBuilder()

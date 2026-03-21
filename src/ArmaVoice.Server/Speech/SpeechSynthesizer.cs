@@ -4,12 +4,12 @@ namespace ArmaVoice.Server.Speech;
 /// Text-to-speech via a local Piper TTS server (HTTP).
 /// Posts text, receives WAV bytes. Falls back gracefully if Piper is unavailable.
 /// </summary>
-public class SpeechSynthesizer
+public class PiperSynthesizer : ISpeechSynthesizer
 {
     private readonly HttpClient _http;
     private readonly string _piperUrl;
 
-    public SpeechSynthesizer(string piperUrl = "http://localhost:5000")
+    public PiperSynthesizer(string piperUrl = "http://localhost:5000")
     {
         _piperUrl = piperUrl.TrimEnd('/');
         _http = new HttpClient
@@ -22,7 +22,7 @@ public class SpeechSynthesizer
     /// Synthesize text to WAV audio bytes using Piper TTS.
     /// Returns empty array and logs a warning if Piper is not available.
     /// </summary>
-    public async Task<byte[]> SynthesizeAsync(string text)
+    public async Task<byte[]> SynthesizeAsync(string text, SpeechContext? context = null)
     {
         if (string.IsNullOrWhiteSpace(text))
             return [];

@@ -18,7 +18,7 @@ public record DialogueRequest(string TargetNetId, string PlayerText);
 public class DialogueManager
 {
     private readonly NpcDialogue _npcDialogue;
-    private readonly SpeechSynthesizer _tts;
+    private readonly ISpeechSynthesizer _tts;
     private readonly AudioPlayer _audioPlayer;
     private readonly SpatialMixer _spatialMixer;
     private readonly RadioEffect _radioEffect;
@@ -30,7 +30,7 @@ public class DialogueManager
 
     public DialogueManager(
         NpcDialogue npcDialogue,
-        SpeechSynthesizer tts,
+        ISpeechSynthesizer tts,
         AudioPlayer audioPlayer,
         SpatialMixer spatialMixer,
         RadioEffect radioEffect,
@@ -125,7 +125,8 @@ public class DialogueManager
 
         // 3. Synthesize speech via TTS
         Console.WriteLine($"[DialogueManager] Synthesizing speech for: \"{responseText[..Math.Min(60, responseText.Length)]}\"");
-        var wavBytes = await _tts.SynthesizeAsync(responseText);
+        var voiceContext = new SpeechContext(UnitName: npcName, Side: npcSide);
+        var wavBytes = await _tts.SynthesizeAsync(responseText, voiceContext);
 
         if (wavBytes.Length == 0)
         {

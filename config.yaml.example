@@ -1,11 +1,30 @@
 server:
   port: 9500
 
-whisper:
-  model_path: ggml-base.en.bin
+stt:
+  system: whisper  # whisper | deepgram
+  whisper:
+    model_path: ggml-base.en.bin
+  deepgram:
+    api_key: YOUR_DEEPGRAM_API_KEY
+    model: nova-2
+    language: en
 
-piper:
-  url: http://localhost:5000
+tts:
+  system: piper  # piper | elevenlabs
+  piper:
+    url: http://localhost:5000
+  elevenlabs:
+    api_key: YOUR_ELEVENLABS_API_KEY
+    model_id: eleven_multilingual_v2
+    voices:
+      default: YOUR_DEFAULT_VOICE_ID
+      blufor: YOUR_BLUFOR_VOICE_ID
+      opfor: YOUR_OPFOR_VOICE_ID
+      indfor: YOUR_INDFOR_VOICE_ID
+      # per unit name:
+      # Miller: YOUR_MILLER_VOICE_ID
+      # Ivanov: YOUR_IVANOV_VOICE_ID
 
 gemini:
   api_key: YOUR_GEMINI_API_KEY

@@ -37,7 +37,10 @@ jobs:
       - name: Download HEMTT
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://github.com/BrettMayson/HEMTT/releases/latest/download/hemtt-windows-x64.exe" -OutFile "hemtt.exe"
+          $tag = (Invoke-RestMethod "https://api.github.com/repos/BrettMayson/HEMTT/releases/latest").tag_name
+          Invoke-WebRequest -Uri "https://github.com/BrettMayson/HEMTT/releases/download/$tag/windows-x64.zip" -OutFile "hemtt.zip"
+          Expand-Archive hemtt.zip -DestinationPath hemtt_bin
+          Copy-Item hemtt_bin/hemtt.exe hemtt.exe
 
       - name: Pack PBO
         shell: pwsh

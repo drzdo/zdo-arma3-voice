@@ -25,24 +25,31 @@ See [doc/DESIGN-v1.md](doc/DESIGN-v1.md) for full design.
 cp config.yaml.example config.yaml
 ```
 
-Edit `config.yaml` with your settings:
+Edit `config.yaml` with your settings. See `config.yaml.example` for all options.
+
+STT and TTS are pluggable — set `system` to choose the backend:
 
 ```yaml
-server:
-  port: 9500
+stt:
+  system: whisper  # or: deepgram
+  whisper:
+    model_path: ggml-base.en.bin
+  deepgram:
+    api_key: ...
+    model: nova-2
+    language: en
 
-whisper:
-  model_path: ggml-base.en.bin
-
-piper:
-  url: http://localhost:5000
-
-gemini:
-  api_key: YOUR_GEMINI_API_KEY
-
-claude:
-  api_key: YOUR_CLAUDE_API_KEY
+tts:
+  system: piper  # or: elevenlabs
+  piper:
+    url: http://localhost:5000
+  elevenlabs:
+    api_key: ...
+    voice_id: ...
+    model_id: eleven_multilingual_v2
 ```
+
+The server validates config on startup and fails with clear errors if required fields are missing.
 
 `config.yaml` is gitignored — your keys stay local.
 
