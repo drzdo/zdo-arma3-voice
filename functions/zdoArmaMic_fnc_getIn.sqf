@@ -1,6 +1,11 @@
-params ["_netIds", "_vehicle"];
-private _veh = nearestObject [_vehicle, "AllVehicles"];
-if (isNull _veh) then { _veh = nearestObject [_vehicle, "Car"]; };
+params ["_netIds", "_pos"];
+private _veh = nearestObject [_pos, "LandVehicle"];
+if (isNull _veh) then { _veh = nearestObject [_pos, "Air"] };
+if (isNull _veh) then { _veh = nearestObject [_pos, "Ship"] };
 if (isNull _veh) exitWith { "no vehicle" };
-{ (_x call BIS_fnc_objectFromNetId) assignAsCargo _veh; [(_x call BIS_fnc_objectFromNetId)] orderGetIn true } forEach _netIds;
+{
+    private _u = _x call BIS_fnc_objectFromNetId;
+    _u assignAsCargo _veh;
+    [_u] orderGetIn true;
+} forEach _netIds;
 "ok"

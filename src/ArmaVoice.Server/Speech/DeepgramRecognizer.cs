@@ -19,6 +19,8 @@ public class DeepgramRecognizer : ISpeechRecognizer
 
     private WaveInEvent? _waveIn;
     private ClientWebSocket? _ws;
+    private volatile bool _wsReady;
+    private readonly List<byte[]> _preBuffer = new();
     private string _transcript = "";
     private readonly object _lock = new();
     private bool _recording;
@@ -46,48 +48,75 @@ public class DeepgramRecognizer : ISpeechRecognizer
         if (_recording || _waveIn == null) return;
 
         _transcript = "";
+        _wsReady = false;
+        lock (_lock) { _preBuffer.Clear(); }
         _cts = new CancellationTokenSource();
 
-        // Connect WebSocket
-        _ws = new ClientWebSocket();
-        _ws.Options.SetRequestHeader("Authorization", $"Token {_apiKey}");
-
-        var url = $"wss://api.deepgram.com/v1/listen?model={_model}&language={_language}&encoding={_encoding}&sample_rate={_sampleRate}&smart_format=true&interim_results=false";
-
-        try
-        {
-            _ws.ConnectAsync(new Uri(url), _cts.Token).GetAwaiter().GetResult();
-            Log.Info("Deepgram", "WebSocket connected, streaming...");
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Deepgram", $"WebSocket connect failed: {ex.Message}");
-            _ws.Dispose();
-            _ws = null;
-            return;
-        }
-
-        // Start receiving transcripts in background
-        _receiveTask = Task.Run(() => ReceiveLoop(_cts.Token));
-
-        // Start mic
+        // Start mic immediately — buffer audio until WebSocket connects
         _waveIn.StartRecording();
         _recording = true;
-        Log.Info("Deepgram", "Recording started (streaming).");
+        Log.Info("Deepgram", "Recording started, connecting WebSocket...");
+
+        // Connect WebSocket in background, flush buffered audio when ready
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _ws = new ClientWebSocket();
+                _ws.Options.SetRequestHeader("Authorization", $"Token {_apiKey}");
+                var url = $"wss://api.deepgram.com/v1/listen?model={_model}&language={_language}&encoding={_encoding}&sample_rate={_sampleRate}&smart_format=true&interim_results=false";
+
+                await _ws.ConnectAsync(new Uri(url), _cts!.Token);
+                Log.Info("Deepgram", "WebSocket connected.");
+
+                // Flush buffered audio
+                byte[][] buffered;
+                lock (_lock)
+                {
+                    buffered = _preBuffer.ToArray();
+                    _preBuffer.Clear();
+                }
+
+                foreach (var chunk in buffered)
+                    await _ws.SendAsync(new ArraySegment<byte>(chunk), WebSocketMessageType.Binary, true, CancellationToken.None);
+
+                if (buffered.Length > 0)
+                    Log.Info("Deepgram", $"Flushed {buffered.Length} buffered chunks.");
+
+                _wsReady = true;
+
+                // Start receiving
+                _receiveTask = ReceiveLoop(_cts.Token);
+                await _receiveTask;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Deepgram", $"WebSocket error: {ex.Message}");
+                try { _ws?.Dispose(); } catch { }
+                _ws = null;
+            }
+        });
     }
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
-        if (_ws?.State != WebSocketState.Open) return;
+        var chunk = new byte[e.BytesRecorded];
+        Array.Copy(e.Buffer, chunk, e.BytesRecorded);
 
-        try
+        if (_wsReady && _ws?.State == WebSocketState.Open)
         {
-            // Send raw PCM audio to Deepgram
-            var segment = new ArraySegment<byte>(e.Buffer, 0, e.BytesRecorded);
-            _ws.SendAsync(segment, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-                .GetAwaiter().GetResult();
+            try
+            {
+                _ws.SendAsync(new ArraySegment<byte>(chunk), WebSocketMessageType.Binary, true, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            catch { }
         }
-        catch { /* connection may have closed */ }
+        else
+        {
+            // Buffer until WebSocket is ready
+            lock (_lock) { _preBuffer.Add(chunk); }
+        }
     }
 
     public void StopRecording()

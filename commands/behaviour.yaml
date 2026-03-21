@@ -1,4 +1,4 @@
 id: behaviour
-description: "Set unit behaviour/combat mode. LLM must set 'formation' field to one of: STEALTH (скрытно), AWARE (на чеку/осторожно), COMBAT (бой/к бою), SAFE (вольно/расслабиться). Triggers: 'go stealth', 'combat mode', 'stay alert', 'скрытно', 'к бою', 'вольно'."
+description: "Set unit behaviour/combat mode. LLM must set 'formation' field to one of: STEALTH, AWARE, COMBAT, SAFE. Triggers: 'stealth'/'скрытно'/'тихо', 'aware'/'осторожно'/'на чеку', 'combat'/'к бою'/'бой', 'safe'/'вольно'/'расслабиться'. If player just says one word like 'скрытно' without specifying units, use units=['all']."
 sqf: |
   [_units, _formation] call zdoArmaMic_fnc_setBehaviour;

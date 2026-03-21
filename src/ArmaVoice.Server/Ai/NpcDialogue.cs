@@ -37,7 +37,7 @@ public class NpcDialogue
 
         var systemPrompt = $"""
             You are {npcName}, a military NPC in Arma 3. Stay in character at all times.
-            The player commanding you is {playerRank} {playerName}.{(_rng.NextSingle() < _useRankChance ? " Address them by rank (e.g. \"сержант\", \"командир\")." : "")}
+            The player commanding you is {playerRank} {playerName}.{(_rng.NextSingle() < _useRankChance ? " Address them by rank — translate the rank to the language you are speaking in (e.g. SERGEANT → сержант, CORPORAL → капрал, PRIVATE → рядовой, LIEUTENANT → лейтенант, CAPTAIN → капитан)." : "")}
 
             Your details:
             - Name: {npcName}

@@ -1,6 +1,7 @@
 id: move
-description: "Move units to a position. Use when player says 'go there', 'move to that building', '100 meters forward', etc."
+description: "Move units to a position. Use when player says 'go there', 'move to that building', '100 meters forward', etc. If player says 'move stealthily'/'move quietly'/'двигай скрытно', set formation to STEALTH. If 'run there'/'бегом туда', set speed to FULL."
 sqf: |
   [_units, _pos] call zdoArmaMic_fnc_moveUnits;
   if (_stance != "") then { [_units, _stance] call zdoArmaMic_fnc_setStance };
   if (_speed != "") then { [_speed] call zdoArmaMic_fnc_setSpeed };
+  if (_formation != "") then { [_units, _formation] call zdoArmaMic_fnc_setBehaviour };

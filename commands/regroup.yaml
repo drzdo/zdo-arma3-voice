@@ -1,4 +1,6 @@
 id: regroup
-description: "Regroup on the player, come back. Triggers: 'regroup', 'come to me', 'fall back', 'ко мне', 'перегруппировка'."
+description: "Regroup on the player, come back. Triggers: 'regroup', 'come to me', 'fall back', 'ко мне', 'перегруппировка'. If 'regroup quietly', set formation to STEALTH."
 sqf: |
   [_units] call zdoArmaMic_fnc_regroup;
+  if (_formation != "") then { [_units, _formation] call zdoArmaMic_fnc_setBehaviour };
+  if (_speed != "") then { [_speed] call zdoArmaMic_fnc_setSpeed };

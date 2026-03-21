@@ -97,6 +97,125 @@ piper:
   url: http://localhost:5000
 ```
 
+## Voice Commands
+
+Hold the PTT key (default: Home) and speak. Works in any language — English, Russian, Ukrainian, etc.
+
+### Movement
+
+| Say | What happens |
+|---|---|
+| "Second, third — move to that building" | Units #2 and #3 move to your crosshair |
+| "Второй, иди туда" | Unit #2 moves to your crosshair |
+| "Everyone, move 100 meters north" | Whole squad moves 100m north of your position |
+| "Red team, move to marker Alpha" | Red team moves to map marker "Alpha" |
+| "Go south" | Last addressed units move 100m south |
+| "Regroup!" / "Ко мне!" | Units return to the player |
+| "Garrison that building" | Units enter and spread across building positions |
+
+### Combat
+
+| Say | What happens |
+|---|---|
+| "Attack that guy" / "Огонь по нему" | Squad engages the target |
+| "Open fire" / "Weapons free" | Units set to fire at will |
+| "Hold fire" / "Не стрелять" | Units cease fire |
+| "Suppress that position" / "Подавить!" | Suppressive fire at crosshair |
+
+### Stance & Speed
+
+| Say | What happens |
+|---|---|
+| "Hit the dirt!" / "Ложись!" | Everyone goes prone |
+| "Stand up" / "Встань" | Standing stance |
+| "Crouch" / "Присядь" | Crouching stance |
+| "Sprint!" / "Бегом!" | Full speed |
+| "Walk" / "Шагом" | Slow speed |
+
+### Behaviour
+
+| Say | What happens |
+|---|---|
+| "Go stealth" / "Скрытно" | Stealth mode |
+| "Stay alert" / "На чеку" | Aware mode |
+| "Combat mode" / "К бою" | Combat mode |
+| "Stand down" / "Вольно" | Safe mode |
+
+### Stop & Hold
+
+| Say | What happens |
+|---|---|
+| "Stop!" / "Freeze!" / "Стой!" | Cancel current action, stay responsive |
+| "Hold position" / "Держать позицию" | Lock in place until new orders |
+
+### Formation
+
+| Say | What happens |
+|---|---|
+| "Wedge formation" | Switch to wedge |
+| "Line" / "Column" / "Diamond" | Other formations |
+
+### Vehicles
+
+| Say | What happens |
+|---|---|
+| "Get in" / "В машину" | Units enter nearest vehicle at crosshair |
+| "Get in as driver" / "Садись за руль" | Enter as driver |
+| "Get out" / "Из машины" | Dismount current vehicle |
+
+### Watch & Look
+
+| Say | What happens |
+|---|---|
+| "Watch there" / "Смотри туда" | Units face the crosshair position |
+| "Look south" / "Наблюдай на юг" | Units look 100m south |
+
+### Reports (voice response via TTS)
+
+| Say | What happens |
+|---|---|
+| "Report contacts" / "Кого видишь?" | Unit reports known hostiles with type, distance, bearing |
+| "Where are you?" / "Где ты?" | Unit reports position relative to player |
+| "Status report" / "Как дела?" | Unit reports health/wounds |
+
+### ACE3 Medical (auto-detected)
+
+| Say | What happens |
+|---|---|
+| "Heal yourself" / "Перевяжись" | Unit self-heals using ACE medical AI |
+| "Medic!" / "Медик!" | Requests nearest medic |
+
+### Dialogue (NPC conversation with TTS voice)
+
+| Say | What happens |
+|---|---|
+| "Miller, what do you see?" | NPC responds in character via voice |
+| "Петрович, что впереди?" | NPC responds in Russian |
+
+### Map & Naming
+
+| Say | What happens |
+|---|---|
+| "Mark this as Bravo" / "Отметь Альфа" | Creates map marker at crosshair |
+| "This is vehicle Alpha" / "Это машина Альфа" | Names the object at crosshair for future reference |
+| "Move to vehicle Alpha" | Uses previously named position |
+
+### Targeting shortcuts
+
+- **"there" / "that building" / "туда"** — uses crosshair / map cursor position
+- **"100m forward" / "200m north"** — relative to player
+- **"bearing 320, 200m"** — explicit azimuth
+- **"marker Alpha"** — map marker (LLM fuzzy-matches the name)
+- **"vehicle Alpha"** — previously named object
+
+### Unit selection
+
+- **"second" / "второй"** — unit #2 in squad
+- **"Miller" / "Петрович"** — by name
+- **"red team" / "группа 1"** — team color (1=red, 2=green, 3=blue, 4=yellow)
+- **"everyone" / "все"** — whole squad
+- No unit mentioned — reuses last addressed units
+
 ## Install mod
 
 Copy `@arma3_mic` folder (with the published `arma3_mic_x64.dll` at root) into your Arma 3 directory. Enable in launcher.
