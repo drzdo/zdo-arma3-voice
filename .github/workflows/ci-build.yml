@@ -69,4 +69,4 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: arma3-mic-server
-          path: publish/server/ArmaVoice.Server.exe
+          path: publish/server/

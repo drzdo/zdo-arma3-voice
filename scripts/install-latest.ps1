@@ -34,10 +34,18 @@ if (Test-Path "@arma3_mic") { Remove-Item -Recurse -Force "@arma3_mic" }
 Expand-Archive "arma3_mic_mod.zip" -DestinationPath .
 Remove-Item "arma3_mic_mod.zip"
 
-# Extract server
+# Extract server (flatten nested folder from artifact)
 Write-Host "Extracting server..."
 if (Test-Path "server") { Remove-Item -Recurse -Force "server" }
-Expand-Archive "arma3_mic_server.zip" -DestinationPath "server"
+Expand-Archive "arma3_mic_server.zip" -DestinationPath "server_tmp"
+# Move contents of the inner folder up
+$inner = Get-ChildItem "server_tmp" -Directory | Select-Object -First 1
+if ($inner) {
+    Move-Item -LiteralPath $inner.FullName -Destination "server"
+} else {
+    Rename-Item "server_tmp" "server"
+}
+if (Test-Path "server_tmp") { Remove-Item -Recurse -Force "server_tmp" }
 Remove-Item "arma3_mic_server.zip"
 
 Write-Host ""
