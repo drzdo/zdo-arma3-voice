@@ -22,6 +22,7 @@ public class DialogueManager
     private readonly RadioEffect _radioEffect;
     private readonly GameState _gameState;
     private readonly UnitRegistry _unitRegistry;
+    private readonly float _radioPan;
     private readonly Channel<DialogueRequest> _queue;
 
     private const float RadioDistanceThreshold = 10f;
@@ -32,13 +33,15 @@ public class DialogueManager
         AudioPlayer audioPlayer,
         RadioEffect radioEffect,
         GameState gameState,
-        UnitRegistry unitRegistry)
+        UnitRegistry unitRegistry,
+        float radioPan = 0f)
     {
         _npcDialogue = npcDialogue;
         _tts = tts;
         _audioPlayer = audioPlayer;
         _radioEffect = radioEffect;
         _gameState = gameState;
+        _radioPan = radioPan;
         _unitRegistry = unitRegistry;
 
         _queue = Channel.CreateUnbounded<DialogueRequest>(new UnboundedChannelOptions
@@ -126,7 +129,7 @@ public class DialogueManager
 
         // 6. Play through spatial provider (radio=full volume, spatial=distance attenuated)
         var spatialProvider = new SpatialSampleProvider(
-            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, isRadio);
+            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, isRadio, _radioPan);
 
         _audioPlayer.Play(spatialProvider);
 

@@ -2,6 +2,9 @@ server:
   host: 0.0.0.0
   port: 9500
 
+audio:
+  radio_pan: 0.0  # -1.0 = left ear, 0.0 = both ears, 1.0 = right ear
+
 # Optional mission/session context — added to all LLM prompts.
 # Describe the scenario so NPCs and intent parsing have context.
 # prompt: "NATO forces patrol Malden island. CSAT insurgents operate in the south. Our squad is recon team Alpha."

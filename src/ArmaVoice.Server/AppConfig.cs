@@ -6,6 +6,7 @@ namespace ArmaVoice.Server;
 public class AppConfig
 {
     public ServerConfig Server { get; set; } = new();
+    public AudioConfig Audio { get; set; } = new();
     public SttConfig Stt { get; set; } = new();
     public TtsConfig Tts { get; set; } = new();
     public LlmConfig Llm { get; set; } = new();
@@ -118,6 +119,12 @@ public class ServerConfig
 {
     public string Host { get; set; } = "0.0.0.0";
     public int Port { get; set; } = 9500;
+}
+
+public class AudioConfig
+{
+    /// <summary>Radio pan: -1.0 = left ear only, 0.0 = both ears, 1.0 = right ear only.</summary>
+    public float RadioPan { get; set; } = 0f;
 }
 
 // ── STT ──────────────────────────────────────────────────

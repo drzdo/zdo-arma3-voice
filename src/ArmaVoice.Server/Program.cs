@@ -109,7 +109,7 @@ public class Program
             var dialogueLlm = CreateLlmClient(config.Llm.Dialogue);
             var npcDialogue = new NpcDialogue(dialogueLlm, config.Prompt);
             dialogueManager = new DialogueManager(
-                npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry);
+                npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan);
             Log.Info("Server", "Dialogue ready.");
         }
         else

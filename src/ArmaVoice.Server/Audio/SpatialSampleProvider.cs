@@ -15,26 +15,30 @@ public class SpatialSampleProvider : ISampleProvider
     private readonly string _npcNetId;
     private readonly UnitRegistry _unitRegistry;
     private readonly bool _isRadio;
+    private readonly float _radioPan;
     private int _position;
     private float _prevFilteredL;
     private float _prevFilteredR;
 
     public WaveFormat WaveFormat { get; }
 
-    /// <param name="isRadio">If true, skip distance attenuation and muffling (radio is full volume, only pan).</param>
+    /// <param name="isRadio">If true, skip distance attenuation and muffling.</param>
+    /// <param name="radioPan">Radio pan: -1=left, 0=center, 1=right.</param>
     public SpatialSampleProvider(
         float[] monoSamples,
         int sampleRate,
         GameState gameState,
         string npcNetId,
         UnitRegistry unitRegistry,
-        bool isRadio = false)
+        bool isRadio = false,
+        float radioPan = 0f)
     {
         _monoSamples = monoSamples;
         _gameState = gameState;
         _npcNetId = npcNetId;
         _unitRegistry = unitRegistry;
         _isRadio = isRadio;
+        _radioPan = Math.Clamp(radioPan, -1f, 1f);
         _position = 0;
 
         WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
@@ -78,21 +82,33 @@ public class SpatialSampleProvider : ISampleProvider
         float leftGain = MathF.Cos(panAngle);
         float rightGain = MathF.Sin(panAngle);
 
-        // Radio: full volume, no muffling. Spatial: distance-based attenuation + low-pass.
-        float attenuation = _isRadio ? 1f : 1f / MathF.Max(1f, distance / 5f);
-        float alpha = _isRadio ? 1f : Math.Clamp(1f - distance / 50f, 0.1f, 1f);
-
         for (int i = 0; i < framesToProcess; i++)
         {
-            float mono = _monoSamples[_position + i] * attenuation;
+            float mono = _monoSamples[_position + i];
 
-            float filteredL = alpha * (mono * leftGain) + (1f - alpha) * _prevFilteredL;
-            float filteredR = alpha * (mono * rightGain) + (1f - alpha) * _prevFilteredR;
-            _prevFilteredL = filteredL;
-            _prevFilteredR = filteredR;
+            if (_isRadio)
+            {
+                // Radio: configurable pan, full volume
+                // pan -1=left, 0=center, 1=right (equal-power)
+                float panAngleR = (_radioPan + 1f) * MathF.PI / 4f;
+                buffer[offset + i * 2] = mono * MathF.Cos(panAngleR);
+                buffer[offset + i * 2 + 1] = mono * MathF.Sin(panAngleR);
+            }
+            else
+            {
+                // Spatial: distance attenuation + pan + low-pass
+                float attenuation = 1f / MathF.Max(1f, distance / 5f);
+                float alpha = Math.Clamp(1f - distance / 50f, 0.1f, 1f);
 
-            buffer[offset + i * 2] = filteredL;
-            buffer[offset + i * 2 + 1] = filteredR;
+                mono *= attenuation;
+                float filteredL = alpha * (mono * leftGain) + (1f - alpha) * _prevFilteredL;
+                float filteredR = alpha * (mono * rightGain) + (1f - alpha) * _prevFilteredR;
+                _prevFilteredL = filteredL;
+                _prevFilteredR = filteredR;
+
+                buffer[offset + i * 2] = filteredL;
+                buffer[offset + i * 2 + 1] = filteredR;
+            }
         }
 
         _position += framesToProcess;
