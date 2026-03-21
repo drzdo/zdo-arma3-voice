@@ -7,15 +7,15 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
@@ -60,13 +60,13 @@ jobs:
           Copy-Item .hemttout/build/addons/*.pbo package/@arma3_mic/addons/
 
       - name: Upload Mod
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: arma3_mic_mod
           path: package/@arma3_mic/
 
       - name: Upload Server
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: arma3-mic-server
           path: publish/server/ArmaVoice.Server.exe
