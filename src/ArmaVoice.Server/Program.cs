@@ -70,6 +70,10 @@ public class Program
             "elevenlabs" => new ElevenLabsSynthesizer(
                 config.Tts.ElevenLabs.ApiKey,
                 config.Tts.ElevenLabs.ModelId,
+                config.Tts.ElevenLabs.Stability,
+                config.Tts.ElevenLabs.SimilarityBoost,
+                config.Tts.ElevenLabs.Style,
+                config.Tts.ElevenLabs.UseSpeakerBoost,
                 config.Tts.ElevenLabs.Voices),
             _ => new PiperSynthesizer(config.Tts.Piper.Url),
         };

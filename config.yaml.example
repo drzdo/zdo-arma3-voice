@@ -19,6 +19,10 @@ tts:
   elevenlabs:
     api_key: YOUR_ELEVENLABS_API_KEY
     model_id: eleven_multilingual_v2
+    stability: 0.75
+    similarity_boost: 0.75
+    style: 0.2
+    use_speaker_boost: false
     voices:
       default: YOUR_DEFAULT_VOICE_ID
       blufor: YOUR_BLUFOR_VOICE_ID

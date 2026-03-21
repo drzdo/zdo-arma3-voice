@@ -12,15 +12,21 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
 {
     private readonly HttpClient _http;
     private readonly string _modelId;
+    private readonly float _stability;
+    private readonly float _similarityBoost;
+    private readonly float _style;
+    private readonly bool _useSpeakerBoost;
     private readonly Dictionary<string, string> _voices;
 
-    /// <param name="voices">
-    /// Voice mapping. Keys: "default", "blufor", "opfor", "indfor", or a unit name.
-    /// Values: ElevenLabs voice IDs.
-    /// </param>
-    public ElevenLabsSynthesizer(string apiKey, string modelId, Dictionary<string, string> voices)
+    public ElevenLabsSynthesizer(string apiKey, string modelId,
+        float stability, float similarityBoost, float style, bool useSpeakerBoost,
+        Dictionary<string, string> voices)
     {
         _modelId = modelId;
+        _stability = stability;
+        _similarityBoost = similarityBoost;
+        _style = style;
+        _useSpeakerBoost = useSpeakerBoost;
         _voices = new Dictionary<string, string>(voices, StringComparer.OrdinalIgnoreCase);
 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
@@ -47,8 +53,10 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
             model_id = _modelId,
             voice_settings = new
             {
-                stability = 0.5,
-                similarity_boost = 0.75
+                stability = _stability,
+                similarity_boost = _similarityBoost,
+                style = _style,
+                use_speaker_boost = _useSpeakerBoost
             }
         });
 

@@ -139,6 +139,7 @@ public class TtsConfig
 {
     public string System { get; set; } = "piper";
     public PiperConfig Piper { get; set; } = new();
+    [YamlMember(Alias = "elevenlabs")]
     public ElevenLabsConfig ElevenLabs { get; set; } = new();
 }
 
@@ -151,6 +152,10 @@ public class ElevenLabsConfig
 {
     public string ApiKey { get; set; } = "";
     public string ModelId { get; set; } = "";
+    public float Stability { get; set; } = 0.75f;
+    public float SimilarityBoost { get; set; } = 0.75f;
+    public float Style { get; set; } = 0.2f;
+    public bool UseSpeakerBoost { get; set; } = false;
     /// <summary>
     /// Voice mapping. Keys: "default", "blufor", "opfor", "indfor", "civilian", or a unit name.
     /// Values: ElevenLabs voice IDs.
