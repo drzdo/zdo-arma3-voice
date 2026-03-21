@@ -61,7 +61,9 @@ public class Program
                     config.Stt.Deepgram.Language,
                     config.Stt.Deepgram.Encoding,
                     config.Stt.Deepgram.SampleRate),
+                #pragma warning disable CA1416
                 "windows" => new WindowsRecognizer(config.Stt.Windows.Language),
+                #pragma warning restore CA1416
                 _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath),
             };
             Log.Info("Server", $"STT ({config.Stt.System}) ready.");
@@ -118,7 +120,7 @@ public class Program
         }
 
         // Command executor
-        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, commandRegistry, dialogueManager, intentLlm);
+        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, commandRegistry, dialogueManager, intentLlm, config.Audio.AckChance);
 
         // Wire up TcpBridge events
         bridge.OnHeadReceived = headJson =>

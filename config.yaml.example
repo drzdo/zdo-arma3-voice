@@ -4,6 +4,7 @@ server:
 
 audio:
   radio_pan: 0.0  # -1.0 = left ear, 0.0 = both ears, 1.0 = right ear
+  ack_chance: 0.5  # 0.0 = units never voice-acknowledge, 1.0 = always
 
 # Optional mission/session context — added to all LLM prompts.
 # Describe the scenario so NPCs and intent parsing have context.

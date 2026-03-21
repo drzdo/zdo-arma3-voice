@@ -15,17 +15,23 @@ public class CommandExecutor
     private readonly CommandRegistry _commandRegistry;
     private readonly DialogueManager? _dialogueManager;
     private readonly ILlmClient _llm;
+    private readonly DialogueManager? _ackDialogue;
+    private readonly float _ackChance;
+    private readonly Random _rng = new();
     private List<string> _lastUnits = [];
 
     public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState,
-        CommandRegistry commandRegistry, DialogueManager? dialogueManager, ILlmClient llm)
+        CommandRegistry commandRegistry, DialogueManager? dialogueManager, ILlmClient llm,
+        float ackChance = 0f)
     {
         _rpc = rpc;
         _unitRegistry = unitRegistry;
         _gameState = gameState;
         _commandRegistry = commandRegistry;
         _dialogueManager = dialogueManager;
+        _ackDialogue = dialogueManager;
         _llm = llm;
+        _ackChance = Math.Clamp(ackChance, 0f, 1f);
     }
 
     public async Task ExecuteAsync(IntentParsed intent, float[] lookTarget)
@@ -89,6 +95,20 @@ public class CommandExecutor
 
         _rpc.Fire(sqf);
         LogCmd(actionId, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr} stance={stance} speed={speed}");
+
+        // Voice acknowledgment
+        if (_ackChance > 0 && _ackDialogue != null && netIds.Count > 0 && _rng.NextSingle() < _ackChance)
+        {
+            // Pick one random unit to ack
+            var ackNetId = netIds[_rng.Next(netIds.Count)];
+            var ackUnit = _unitRegistry.GetUnit(ackNetId);
+            if (ackUnit != null && !string.IsNullOrEmpty(ackUnit.Name))
+            {
+                _ackDialogue.Enqueue(ackNetId,
+                    $"[ACK] The player just gave you a '{actionId}' command. Respond with a very short military acknowledgment (1 sentence max). Address the player by their role (e.g. 'командир', 'command'). Examples: 'Так точно!', 'Roger that!', 'Принял, командир!', 'Copy, moving out.'");
+                Log.Info("Cmd", $"Ack from {ackUnit.Name}");
+            }
+        }
     }
 
     // ── Unit resolution ──────────────────────────────────

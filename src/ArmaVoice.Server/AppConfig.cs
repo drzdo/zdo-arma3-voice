@@ -125,6 +125,8 @@ public class AudioConfig
 {
     /// <summary>Radio pan: -1.0 = left ear only, 0.0 = both ears, 1.0 = right ear only.</summary>
     public float RadioPan { get; set; } = 0f;
+    /// <summary>Probability (0-1) that a unit will voice-acknowledge a command. 0=never, 1=always.</summary>
+    public float AckChance { get; set; } = 0f;
 }
 
 // ── STT ──────────────────────────────────────────────────
