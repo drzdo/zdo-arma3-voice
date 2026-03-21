@@ -1,0 +1,14 @@
+server:
+  port: 9500
+
+whisper:
+  model_path: ggml-base.en.bin
+
+piper:
+  url: http://localhost:5000
+
+gemini:
+  api_key: YOUR_GEMINI_API_KEY
+
+claude:
+  api_key: YOUR_CLAUDE_API_KEY

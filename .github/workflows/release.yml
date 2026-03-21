@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish Extension (NativeAOT)
+        run: dotnet publish src/ArmaVoice.Extension -c Release -r win-x64 -o publish/extension
+
+      - name: Publish Server (self-contained)
+        run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 --self-contained -o publish/server
+
+      # Package the Arma 3 mod folder with the extension DLL
+      - name: Package mod
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package/@arma3_mic
+          Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
+          Copy-Item -Recurse mod/addons package/@arma3_mic/addons
+          Compress-Archive -Path package/@arma3_mic -DestinationPath package/arma3_mic_mod.zip
+
+      # Package the server
+      - name: Package server
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/server/* -DestinationPath package/arma3_mic_server.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            package/arma3_mic_mod.zip
+            package/arma3_mic_server.zip

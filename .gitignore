@@ -1,0 +1,11 @@
+bin/
+obj/
+publish/
+.vs/
+*.user
+*.suo
+
+# Config contains API keys — don't commit
+config.yaml
+
+.claude/
