@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ArmaVoice.Server.Net;
 
@@ -76,8 +77,8 @@ public sealed class TcpBridge : IDisposable
     /// </summary>
     public void SendRpc(int id, string sqf)
     {
-        var json = JsonSerializer.Serialize(new { id, sqf });
-        SendLine(json);
+        var obj = new JsonObject { ["id"] = id, ["sqf"] = sqf };
+        SendLine(obj.ToJsonString());
     }
 
     private void SendLine(string line)

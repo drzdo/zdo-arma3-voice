@@ -1,0 +1,5 @@
+id: hold
+description: "Stop and LOCK position. Units will not move until given new orders. Triggers: 'hold position', 'держать позицию'."
+sqf: |
+  [_units] call zdoArmaMic_fnc_holdPosition;
+  if (_stance != "") then { [_units, _stance] call zdoArmaMic_fnc_setStance };

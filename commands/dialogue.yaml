@@ -1,0 +1,3 @@
+id: dialogue
+description: "Talk to an NPC conversationally (ask questions, make remarks). ONLY for actual conversation, NOT for giving orders. LLM must set 'target' (NPC netId/name) and 'text' (what the player said)."
+sqf: ""

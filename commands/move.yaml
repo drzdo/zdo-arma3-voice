@@ -1,0 +1,6 @@
+id: move
+description: "Move units to a position. Use when player says 'go there', 'move to that building', '100 meters forward', etc."
+sqf: |
+  [_units, _pos] call zdoArmaMic_fnc_moveUnits;
+  if (_stance != "") then { [_units, _stance] call zdoArmaMic_fnc_setStance };
+  if (_speed != "") then { [_speed] call zdoArmaMic_fnc_setSpeed };

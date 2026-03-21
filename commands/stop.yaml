@@ -1,0 +1,4 @@
+id: stop
+description: "Cancel current action, stay put but remain responsive to new orders. Triggers: 'stop', 'freeze', 'halt', 'стой', 'замри'."
+sqf: |
+  [_units] call zdoArmaMic_fnc_stop;

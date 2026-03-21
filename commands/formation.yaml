@@ -1,0 +1,4 @@
+id: formation
+description: "Change group formation. LLM must set 'formation' field to one of: COLUMN, LINE, WEDGE, VEE, STAG COLUMN, DIAMOND, FILE, ECH LEFT, ECH RIGHT."
+sqf: |
+  [_formation] call zdoArmaMic_fnc_setFormation;

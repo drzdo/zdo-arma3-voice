@@ -33,6 +33,13 @@ jobs:
       - name: Publish Server (single exe)
         run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
 
+      - name: Bundle server data
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse commands publish/server/commands
+          Copy-Item -Recurse functions publish/server/functions
+          Copy-Item config.yaml.example publish/server/config.yaml.example
+
       - name: Download HEMTT
         shell: pwsh
         env:

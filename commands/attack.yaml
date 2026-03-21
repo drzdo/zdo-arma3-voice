@@ -1,0 +1,4 @@
+id: attack
+description: "Engage/fire at a target. Triggers: 'attack', 'fire at', 'engage', 'огонь', 'атаковать'."
+sqf: |
+  [_units, _target] call zdoArmaMic_fnc_attackTarget;

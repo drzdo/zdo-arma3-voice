@@ -1,0 +1,4 @@
+id: regroup
+description: "Regroup on the player, come back. Triggers: 'regroup', 'come to me', 'fall back', 'ко мне', 'перегруппировка'."
+sqf: |
+  [_units] call zdoArmaMic_fnc_regroup;

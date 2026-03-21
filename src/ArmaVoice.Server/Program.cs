@@ -37,6 +37,12 @@ public class Program
         Console.WriteLine($"[Server] LLM intent: {config.Llm.Intent.System}");
         Console.WriteLine($"[Server] LLM dialogue: {config.Llm.Dialogue.System}");
 
+        // Load commands and functions from directories
+        var commandRegistry = new CommandRegistry();
+        var baseDir = AppContext.BaseDirectory;
+        commandRegistry.LoadCommands(Path.Combine(baseDir, "commands"));
+        commandRegistry.LoadFunctions(Path.Combine(baseDir, "functions"));
+
         // Core infrastructure
         var bridge = new TcpBridge(config.Server.Host, config.Server.Port);
         var rpcClient = new RpcClient(bridge);
@@ -94,7 +100,7 @@ public class Program
         var intentLlm = CreateLlmClient(config.Llm.Intent);
         var dialogueLlm = CreateLlmClient(config.Llm.Dialogue);
 
-        var intentParser = new IntentParser(intentLlm);
+        var intentParser = new IntentParser(intentLlm, commandRegistry.BuildPromptSection());
         Console.WriteLine("[Server] IntentParser ready.");
 
         var npcDialogue = new NpcDialogue(dialogueLlm);
@@ -105,7 +111,7 @@ public class Program
             npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry);
 
         // Command executor
-        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, dialogueManager);
+        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, commandRegistry, dialogueManager);
 
         // Wire up TcpBridge events
         bridge.OnStateReceived = stateJson =>
@@ -130,7 +136,7 @@ public class Program
             {
                 lastLookTarget = lookPos;
                 speechRecognizer?.StartRecording();
-                Console.WriteLine("[PTT] Recording...");
+                Console.WriteLine("[Mic] Recording started...");
             }
             else if (direction == "up")
             {
@@ -138,11 +144,12 @@ public class Program
 
                 if (speechRecognizer == null)
                 {
-                    Console.WriteLine("[PTT] Speech recognizer not available.");
+                    Console.WriteLine("[Mic] Speech recognizer not available.");
                     return;
                 }
 
                 speechRecognizer.StopRecording();
+                Console.WriteLine("[Mic] Recording stopped, transcribing...");
                 var capturedLookTarget = lastLookTarget;
 
                 _ = Task.Run(async () =>
@@ -152,11 +159,15 @@ public class Program
                         var transcript = await speechRecognizer.TranscribeAsync();
                         if (string.IsNullOrWhiteSpace(transcript))
                         {
-                            Console.WriteLine("[PTT] No speech detected.");
+                            Console.WriteLine("[Mic] No speech detected.");
                             return;
                         }
 
-                        Console.WriteLine($"[PTT] Transcript: \"{transcript}\"");
+                        Console.WriteLine($"[Mic] Transcript: \"{transcript}\"");
+
+                        // Show transcript in Arma chat + RPT
+                        rpcClient.Fire($"systemChat 'Voice: {transcript.Replace("'", "")}'");
+                        rpcClient.Fire($"diag_log 'ArmaVoice transcript: {transcript.Replace("'", "")}'");
 
                         var units = unitRegistry.GetAllUnits()
                             .Select(u => new UnitSummary
@@ -172,7 +183,7 @@ public class Program
                         var intent = await intentParser.ParseAsync(transcript, units);
                         if (intent == null)
                         {
-                            Console.WriteLine("[PTT] Could not parse intent.");
+                            Console.WriteLine("[Mic] Could not parse intent.");
                             return;
                         }
 
@@ -180,7 +191,7 @@ public class Program
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[PTT] Error in speech pipeline: {ex.Message}");
+                        Console.WriteLine($"[Mic] Error in speech pipeline: {ex.Message}");
                     }
                 });
             }
@@ -188,10 +199,9 @@ public class Program
 
         bridge.OnClientConnected = () =>
         {
-            Console.WriteLine("[Server] Client connected — registering SQF functions...");
-            SqfFunctions.RegisterAll(rpcClient);
+            Console.WriteLine("[Server] Client connected — registering functions...");
+            commandRegistry.RegisterFunctions(rpcClient);
 
-            // Sync squad after a short delay (let functions register first)
             _ = Task.Run(async () =>
             {
                 await Task.Delay(1000);
@@ -212,7 +222,7 @@ public class Program
         // Start dialogue manager in background
         var dialogueTask = dialogueManager.RunAsync(cts.Token);
 
-        // Periodic squad re-sync (every 30s)
+        // Periodic squad re-sync
         _ = Task.Run(async () =>
         {
             while (!cts.Token.IsCancellationRequested)
@@ -223,7 +233,7 @@ public class Program
             }
         });
 
-        // Start the TCP bridge (blocks until cancellation)
+        // Start the TCP bridge
         try
         {
             Console.WriteLine("[Server] Starting...");
