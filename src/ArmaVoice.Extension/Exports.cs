@@ -14,13 +14,13 @@ public static class Exports
     // Arma 3 callExtension entry points
     // -----------------------------------------------------------------------
 
-    [UnmanagedCallersOnly(EntryPoint = "_RVExtensionVersion@8")]
+    [UnmanagedCallersOnly(EntryPoint = "RVExtensionVersion")]
     public static void RVExtensionVersion(nint output, int outputSize)
     {
         WriteOutput(output, outputSize, "1.0.0");
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "_RVExtension@12")]
+    [UnmanagedCallersOnly(EntryPoint = "RVExtension")]
     public static void RVExtension(nint output, int outputSize, nint function)
     {
         var func = ReadString(function);
@@ -42,7 +42,7 @@ public static class Exports
         }
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "_RVExtensionArgs@20")]
+    [UnmanagedCallersOnly(EntryPoint = "RVExtensionArgs")]
     public static int RVExtensionArgs(nint output, int outputSize, nint function, nint argv, int argc)
     {
         var func = ReadString(function);
