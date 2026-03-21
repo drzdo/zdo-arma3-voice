@@ -24,7 +24,7 @@ Builds on macOS (IL only). NativeAOT publish (`dotnet publish`) requires Windows
 
 ### SQF gotchas
 
-- **No `//` comments inside expressions**: SQF parses `//` as division inside code blocks. Use `/* */` for inline comments. `//` only works at the start of a line.
+- **No comments in SQF function files**: The function bodies are sent via `compileFinal '...'` as strings. Both `//` and `/* */` comments break parsing inside compiled strings. Do NOT use any comments in `functions/*.sqf` files.
 - **Operator precedence**: All SQF binary operators evaluate **right-to-left**. Always parenthesize `callExtension` before comparing: `("ext" callExtension "cmd") == "value"`, NOT `"ext" callExtension "cmd" == "value"` (the latter compares first, then passes the bool to callExtension).
 - **`callExtension` forms**:
   - Simple: `ext callExtension "fn"` → returns String.

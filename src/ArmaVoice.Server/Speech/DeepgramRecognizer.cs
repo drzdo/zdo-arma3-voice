@@ -1,68 +1,93 @@
-using System.Net.Http.Headers;
+using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using NAudio.Wave;
 
 namespace ArmaVoice.Server.Speech;
 
 /// <summary>
-/// Speech-to-text via Deepgram REST API.
-/// Records mic locally with NAudio, sends audio to Deepgram for transcription.
+/// Speech-to-text via Deepgram WebSocket streaming API.
+/// Streams audio in real-time while recording — transcript is ready almost instantly on stop.
 /// </summary>
 public class DeepgramRecognizer : ISpeechRecognizer
 {
-    private readonly HttpClient _http;
+    private readonly string _apiKey;
     private readonly string _model;
     private readonly string _language;
     private readonly string _encoding;
     private readonly int _sampleRate;
+
     private WaveInEvent? _waveIn;
-    private MemoryStream? _audioBuffer;
-    private bool _recording;
+    private ClientWebSocket? _ws;
+    private string _transcript = "";
     private readonly object _lock = new();
+    private bool _recording;
+    private CancellationTokenSource? _cts;
+    private Task? _receiveTask;
 
     public DeepgramRecognizer(string apiKey, string model, string language, string encoding, int sampleRate)
     {
+        _apiKey = apiKey;
         _model = model;
         _language = language;
         _encoding = encoding;
         _sampleRate = sampleRate;
 
-        _http = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiKey);
-
         _waveIn = new WaveInEvent
         {
             WaveFormat = new WaveFormat(sampleRate, 16, 1),
-            BufferMilliseconds = 50
+            BufferMilliseconds = 100
         };
         _waveIn.DataAvailable += OnDataAvailable;
-        _audioBuffer = new MemoryStream();
-    }
-
-    private void OnDataAvailable(object? sender, WaveInEventArgs e)
-    {
-        lock (_lock)
-        {
-            _audioBuffer?.Write(e.Buffer, 0, e.BytesRecorded);
-        }
     }
 
     public void StartRecording()
     {
         if (_recording || _waveIn == null) return;
 
-        lock (_lock)
+        _transcript = "";
+        _cts = new CancellationTokenSource();
+
+        // Connect WebSocket
+        _ws = new ClientWebSocket();
+        _ws.Options.SetRequestHeader("Authorization", $"Token {_apiKey}");
+
+        var url = $"wss://api.deepgram.com/v1/listen?model={_model}&language={_language}&encoding={_encoding}&sample_rate={_sampleRate}&smart_format=true&interim_results=false";
+
+        try
         {
-            _audioBuffer?.SetLength(0);
-            _audioBuffer?.Seek(0, SeekOrigin.Begin);
+            _ws.ConnectAsync(new Uri(url), _cts.Token).GetAwaiter().GetResult();
+            Log.Info("Deepgram", "WebSocket connected, streaming...");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Deepgram", $"WebSocket connect failed: {ex.Message}");
+            _ws.Dispose();
+            _ws = null;
+            return;
         }
 
+        // Start receiving transcripts in background
+        _receiveTask = Task.Run(() => ReceiveLoop(_cts.Token));
+
+        // Start mic
         _waveIn.StartRecording();
         _recording = true;
-        Log.Info("Deepgram", "Recording started.");
+        Log.Info("Deepgram", "Recording started (streaming).");
+    }
+
+    private void OnDataAvailable(object? sender, WaveInEventArgs e)
+    {
+        if (_ws?.State != WebSocketState.Open) return;
+
+        try
+        {
+            // Send raw PCM audio to Deepgram
+            var segment = new ArraySegment<byte>(e.Buffer, 0, e.BytesRecorded);
+            _ws.SendAsync(segment, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                .GetAwaiter().GetResult();
+        }
+        catch { /* connection may have closed */ }
     }
 
     public void StopRecording()
@@ -71,85 +96,115 @@ public class DeepgramRecognizer : ISpeechRecognizer
 
         _waveIn.StopRecording();
         _recording = false;
-        Log.Info("Deepgram", "Recording stopped.");
+        Log.Info("Deepgram", "Recording stopped, finalizing...");
+
+        // Send close message to Deepgram to flush final transcript
+        if (_ws?.State == WebSocketState.Open)
+        {
+            try
+            {
+                // Deepgram expects a JSON close message
+                var closeMsg = Encoding.UTF8.GetBytes("{\"type\":\"CloseStream\"}");
+                _ws.SendAsync(new ArraySegment<byte>(closeMsg), WebSocketMessageType.Text, true, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            catch { }
+        }
     }
 
     public async Task<string> TranscribeAsync()
     {
-        byte[] rawPcm;
-        lock (_lock)
+        // Wait for receive loop to get the final transcript
+        if (_receiveTask != null)
         {
-            if (_audioBuffer == null || _audioBuffer.Length == 0)
-                return "";
-
-            rawPcm = _audioBuffer.ToArray();
-            _audioBuffer.SetLength(0);
-            _audioBuffer.Seek(0, SeekOrigin.Begin);
+            try
+            {
+                var timeout = Task.Delay(5000);
+                await Task.WhenAny(_receiveTask, timeout);
+            }
+            catch { }
         }
 
-        Log.Info("Deepgram", $"Sending {rawPcm.Length / 2} samples ({rawPcm.Length / 2 / (float)_sampleRate:F1}s) to Deepgram...");
+        // Cleanup WebSocket
+        if (_ws != null)
+        {
+            try { _ws.Dispose(); } catch { }
+            _ws = null;
+        }
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        _receiveTask = null;
 
-        // Build WAV in memory (Deepgram accepts raw WAV)
-        var wavBytes = BuildWav(rawPcm, _sampleRate, 16, 1);
+        var result = _transcript;
+        Log.Info("Deepgram", $"Transcription: \"{result}\"");
+        return result;
+    }
 
-        var url = $"https://api.deepgram.com/v1/listen?model={_model}&language={_language}&encoding={_encoding}&sample_rate={_sampleRate}&smart_format=true";
+    private async Task ReceiveLoop(CancellationToken ct)
+    {
+        var buffer = new byte[8192];
+        var msgBuffer = new StringBuilder();
 
         try
         {
-            var content = new ByteArrayContent(wavBytes);
-            content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
-
-            var response = await _http.PostAsync(url, content);
-            var body = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
+            while (_ws?.State == WebSocketState.Open && !ct.IsCancellationRequested)
             {
-                Log.Error("Deepgram", $"API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
-                return "";
-            }
+                var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
 
-            using var doc = JsonDocument.Parse(body);
-            var transcript = doc.RootElement
-                .GetProperty("results")
-                .GetProperty("channels")[0]
+                if (result.MessageType == WebSocketMessageType.Close)
+                    break;
+
+                if (result.MessageType == WebSocketMessageType.Text)
+                {
+                    msgBuffer.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+
+                    if (result.EndOfMessage)
+                    {
+                        var json = msgBuffer.ToString();
+                        msgBuffer.Clear();
+                        ParseTranscript(json);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (WebSocketException) { /* connection closed */ }
+        catch (Exception ex) { Log.Error("Deepgram", $"Receive error: {ex.Message}"); }
+    }
+
+    private void ParseTranscript(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("type", out var typeProp)) return;
+            var type = typeProp.GetString();
+
+            if (type != "Results") return;
+
+            var isFinal = root.GetProperty("is_final").GetBoolean();
+            if (!isFinal) return;
+
+            var transcript = root
+                .GetProperty("channel")
                 .GetProperty("alternatives")[0]
                 .GetProperty("transcript")
                 .GetString() ?? "";
 
-            Log.Info("Deepgram", $"Transcription: \"{transcript}\"");
-            return transcript;
+            if (!string.IsNullOrEmpty(transcript))
+            {
+                lock (_lock)
+                {
+                    if (_transcript.Length > 0) _transcript += " ";
+                    _transcript += transcript;
+                }
+                Log.Info("Deepgram", $"Partial: \"{transcript}\"");
+            }
         }
-        catch (Exception ex)
-        {
-            Log.Error("Deepgram", $"Error: {ex.Message}");
-            return "";
-        }
-    }
-
-    private static byte[] BuildWav(byte[] pcmData, int sampleRate, int bitsPerSample, int channels)
-    {
-        using var ms = new MemoryStream();
-        using var writer = new BinaryWriter(ms);
-
-        int byteRate = sampleRate * channels * bitsPerSample / 8;
-        int blockAlign = channels * bitsPerSample / 8;
-
-        writer.Write("RIFF"u8);
-        writer.Write(36 + pcmData.Length);
-        writer.Write("WAVE"u8);
-        writer.Write("fmt "u8);
-        writer.Write(16); // subchunk size
-        writer.Write((short)1); // PCM
-        writer.Write((short)channels);
-        writer.Write(sampleRate);
-        writer.Write(byteRate);
-        writer.Write((short)blockAlign);
-        writer.Write((short)bitsPerSample);
-        writer.Write("data"u8);
-        writer.Write(pcmData.Length);
-        writer.Write(pcmData);
-
-        return ms.ToArray();
+        catch { /* ignore malformed messages */ }
     }
 
     public void Dispose()
@@ -157,21 +212,15 @@ public class DeepgramRecognizer : ISpeechRecognizer
         if (_waveIn != null)
         {
             _waveIn.DataAvailable -= OnDataAvailable;
-            if (_recording)
-            {
-                _waveIn.StopRecording();
-                _recording = false;
-            }
+            if (_recording) { _waveIn.StopRecording(); _recording = false; }
             _waveIn.Dispose();
             _waveIn = null;
         }
 
-        lock (_lock)
-        {
-            _audioBuffer?.Dispose();
-            _audioBuffer = null;
-        }
-
-        _http.Dispose();
+        _cts?.Cancel();
+        try { _ws?.Dispose(); } catch { }
+        _ws = null;
+        _cts?.Dispose();
+        _cts = null;
     }
 }
