@@ -4,4 +4,11 @@ sqf: ""
 prompt_sqf: |
   private _data = [_units] call zdoArmaMic_fnc_reportHostiles;
   private _pi = call zdoArmaMic_fnc_getPlayerInfo;
-  format ["[SITREP] Report hostile contacts to %1 %2. Data [type,side,dist_m,abs_bearing,rel_bearing]: %3. If empty say no hostiles. 1-3 sentences. Use direction AND bearing.", _pi select 1, _pi select 0, _data]
+  private _prompt = "[SITREP] Report hostile contacts. ";
+  _prompt = _prompt + "STRICT: Use ONLY the data below. Do NOT invent or change any numbers. ";
+  _prompt = _prompt + format ["Data [type, side, distance_m, absolute_bearing, relative_bearing_from_you]: %1. ", _data];
+  _prompt = _prompt + "For each contact say: type, distance, bearing number. ";
+  _prompt = _prompt + "Convert relative_bearing to direction: 0=ahead, 90=right, 180=behind, 270=left. ";
+  _prompt = _prompt + "Example for data ['Rifleman','EAST',200,270,315]: 'Стрелок, 200 метров, азимут 270, спереди-слева'. ";
+  _prompt = _prompt + "If data is empty array [], say no contacts. 1-3 sentences max.";
+  _prompt
