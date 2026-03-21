@@ -50,9 +50,11 @@ jobs:
       - name: Package mod
         shell: pwsh
         run: |
+          Write-Host "--- HEMTT output ---"
+          Get-ChildItem -Recurse .hemttout | ForEach-Object { $_.FullName }
           New-Item -ItemType Directory -Force -Path package/@arma3_mic/addons
           Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
-          Copy-Item .hemttout/build/addons/arma3_mic.pbo package/@arma3_mic/addons/
+          Copy-Item .hemttout/build/addons/*.pbo package/@arma3_mic/addons/
 
       - name: Upload Mod
         uses: actions/upload-artifact@v4
