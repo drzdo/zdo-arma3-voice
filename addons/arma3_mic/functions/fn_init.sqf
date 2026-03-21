@@ -96,16 +96,18 @@ addMissionEventHandler ["EachFrame", {
 // Reconnect loop — runs in parallel, retries every 10 seconds
 [] spawn {
     while {true} do {
-        if (("arma3_mic" callExtension "status") == "0") then {
-            private _addr = arma3_mic_serverHost + ":" + str (round arma3_mic_serverPort);
-            "arma3_mic" callExtension toJSON createHashMapFromArray [
-                ["t", "connect"], ["addr", _addr]
-            ];
-            systemChat format ["ArmaVoice: connecting to %1...", _addr];
-        } else {
-            if (isNil "arma3_mic_wasConnected") then {
-                arma3_mic_wasConnected = true;
-                systemChat "ArmaVoice: connected";
+        if (arma3_mic_enabled) then {
+            if (("arma3_mic" callExtension "status") == "0") then {
+                private _addr = arma3_mic_serverHost + ":" + str (round arma3_mic_serverPort);
+                "arma3_mic" callExtension toJSON createHashMapFromArray [
+                    ["t", "connect"], ["addr", _addr]
+                ];
+                systemChat format ["ArmaVoice: connecting to %1...", _addr];
+            } else {
+                if (isNil "arma3_mic_wasConnected") then {
+                    arma3_mic_wasConnected = true;
+                    systemChat "ArmaVoice: connected";
+                };
             };
         };
         sleep 10;

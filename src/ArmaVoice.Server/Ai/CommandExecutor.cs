@@ -78,9 +78,9 @@ public class CommandExecutor
                 var hostilesJson = await _rpc.CallAsync($"[[{sitrepArr}]] call zdoArmaMic_fnc_reportHostiles");
 
                 // Send hostiles data to dialogue manager as a special report prompt
-                var prompt = $"[SITREP] You are {reporterName}. Report these known hostile contacts to the commander in a brief, natural military radio style. "
+                var prompt = $"[SITREP] You are {reporterName}. Report known hostile contacts to {_gameState.PlayerRank} {_gameState.PlayerName}. "
                     + $"Data (format: [type, side, distance_m, absolute_bearing, relative_bearing_from_you]): {hostilesJson}. "
-                    + "If the list is empty, say you don't see any hostiles. Be concise — 1-3 sentences. Use relative directions (ahead, left, right, behind) when helpful.";
+                    + "If the list is empty, say you don't see any hostiles. Be concise — 1-3 sentences. Use both relative direction AND bearing/azimuth. Example: 'Rifleman, 200 meters, bearing 150, to our right'.";
 
                 _dialogueManager.Enqueue(reporterNetId, prompt);
                 LogCmd("SitrepHostiles", $"queued report from {reporterName}");
@@ -105,8 +105,8 @@ public class CommandExecutor
                 var posArr = string.Join(",", posUnits.Select(id => $"'{id}'"));
                 var posDataJson = await _rpc.CallAsync($"[[{posArr}]] call zdoArmaMic_fnc_getUnitPosition");
                 var prompt = $"[POSITION REPORT] Report your position to the player. Player is {_gameState.PlayerRank} {_gameState.PlayerName}. "
-                    + $"Data (format: [unitName, distance_m, bearing_degrees]): {posDataJson}. "
-                    + "Be brief and natural, use relative directions. Address the player by rank.";
+                    + $"Data (format: [unitName, distance_m, bearing_degrees_from_player]): {posDataJson}. "
+                    + "Use cardinal direction (south-west, north, etc) AND bearing (azimuth). Example: '150 meters south-west, bearing 220'. Be brief, 1 sentence.";
                 _dialogueManager.Enqueue(reporterNetId, prompt);
                 LogCmd("SitrepPos", $"queued from {reporterNetId}");
             }

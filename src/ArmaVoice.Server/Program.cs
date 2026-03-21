@@ -92,7 +92,8 @@ public class Program
 
         // Audio
         var audioPlayer = new AudioPlayer();
-        var radioEffect = new RadioEffect();
+        var rc = config.Audio.Radio;
+        var radioEffect = new RadioEffect(rc.LowCutHz, rc.HighCutHz, rc.Distortion, rc.NoiseLevel, rc.SquelchDuration, rc.UseBiquad);
 
         // LLM clients
         static ILlmClient CreateLlmClient(LlmInstanceConfig cfg) => cfg.System.ToLowerInvariant() switch
@@ -111,9 +112,9 @@ public class Program
         if (config.Llm.Dialogue.System.ToLowerInvariant() != "none")
         {
             var dialogueLlm = CreateLlmClient(config.Llm.Dialogue);
-            var npcDialogue = new NpcDialogue(dialogueLlm, config.Prompt);
+            var npcDialogue = new NpcDialogue(dialogueLlm, config.Prompt, config.Audio.UseRankChance);
             dialogueManager = new DialogueManager(
-                npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan);
+                npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan, config.Audio.RadioDistance);
             Log.Info("Server", "Dialogue ready.");
         }
         else

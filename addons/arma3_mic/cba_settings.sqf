@@ -21,3 +21,11 @@
     [1, 30, 3, 0],
     false
 ] call CBA_fnc_addSetting;
+
+[
+    "arma3_mic_enabled", "CHECKBOX",
+    ["Enabled", "Enable/disable connection to ArmaVoice server"],
+    "ArmaVoice",
+    true,
+    false
+] call CBA_fnc_addSetting;

@@ -23,9 +23,8 @@ public class DialogueManager
     private readonly GameState _gameState;
     private readonly UnitRegistry _unitRegistry;
     private readonly float _radioPan;
+    private readonly float _radioDistance;
     private readonly Channel<DialogueRequest> _queue;
-
-    private const float RadioDistanceThreshold = 10f;
 
     public DialogueManager(
         NpcDialogue npcDialogue,
@@ -34,7 +33,8 @@ public class DialogueManager
         RadioEffect radioEffect,
         GameState gameState,
         UnitRegistry unitRegistry,
-        float radioPan = 0f)
+        float radioPan = 0f,
+        float radioDistance = 10f)
     {
         _npcDialogue = npcDialogue;
         _tts = tts;
@@ -42,6 +42,7 @@ public class DialogueManager
         _radioEffect = radioEffect;
         _gameState = gameState;
         _radioPan = radioPan;
+        _radioDistance = radioDistance;
         _unitRegistry = unitRegistry;
 
         _queue = Channel.CreateUnbounded<DialogueRequest>(new UnboundedChannelOptions
@@ -117,7 +118,7 @@ public class DialogueManager
         float distance = MathF.Sqrt(dx * dx + dy * dy + dz * dz);
 
         // 5. If far → apply radio effect (no distance attenuation in spatial)
-        var isRadio = distance >= RadioDistanceThreshold;
+        var isRadio = distance >= _radioDistance;
         if (isRadio)
         {
             Log.Info("DialogueManager", $"Radio effect (distance: {distance:F1}m)");

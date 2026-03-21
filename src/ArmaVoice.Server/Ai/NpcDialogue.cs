@@ -8,15 +8,18 @@ public class NpcDialogue
 {
     private readonly ILlmClient _llm;
     private readonly string _sessionContext;
+    private readonly float _useRankChance;
+    private readonly Random _rng = new();
     private readonly Dictionary<string, List<LlmMessage>> _history = new();
 
     private const int MaxHistoryPerNpc = 10;
     private const int HistoryContextCount = 5;
 
-    public NpcDialogue(ILlmClient llm, string sessionContext = "")
+    public NpcDialogue(ILlmClient llm, string sessionContext = "", float useRankChance = 0.5f)
     {
         _llm = llm;
         _sessionContext = sessionContext;
+        _useRankChance = Math.Clamp(useRankChance, 0f, 1f);
     }
 
     public async Task<string> GenerateResponseAsync(
@@ -34,7 +37,7 @@ public class NpcDialogue
 
         var systemPrompt = $"""
             You are {npcName}, a military NPC in Arma 3. Stay in character at all times.
-            The player commanding you is {playerRank} {playerName}. Address them by rank when appropriate (e.g. "сержант", "командир", "товарищ сержант").
+            The player commanding you is {playerRank} {playerName}.{(_rng.NextSingle() < _useRankChance ? " Address them by rank (e.g. \"сержант\", \"командир\")." : "")}
 
             Your details:
             - Name: {npcName}
