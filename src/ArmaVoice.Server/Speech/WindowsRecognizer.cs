@@ -1,7 +1,10 @@
 using System.Globalization;
+using System.Runtime.Versioning;
 using System.Speech.Recognition;
 
 namespace ArmaVoice.Server.Speech;
+
+[SupportedOSPlatform("windows")]
 
 /// <summary>
 /// STT using Windows built-in speech recognition (System.Speech).
