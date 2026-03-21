@@ -76,8 +76,9 @@ addMissionEventHandler ["EachFrame", {
     while {true} do {
         if (("arma3_mic" callExtension "status") == "0") then {
             private _addr = arma3_mic_serverHost + ":" + str (round arma3_mic_serverPort);
-            "arma3_mic" callExtension ["connect", [_addr]];
-            systemChat format ["ArmaVoice: connecting to %1...", _addr];
+            private _connectResult = "arma3_mic" callExtension ["connect", [_addr]];
+            diag_log format ["ArmaVoice: connect(%1) = %2", _addr, _connectResult];
+            systemChat format ["ArmaVoice: connecting to %1... result=%2", _addr, _connectResult];
         } else {
             // Connected — check once, log on first connect
             if (isNil "arma3_mic_wasConnected") then {

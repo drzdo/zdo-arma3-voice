@@ -10,6 +10,7 @@ namespace ArmaVoice.Server.Net;
 /// </summary>
 public sealed class TcpBridge : IDisposable
 {
+    private readonly string _host;
     private readonly int _port;
     private TcpListener? _listener;
     private System.Net.Sockets.TcpClient? _client;
@@ -31,8 +32,9 @@ public sealed class TcpBridge : IDisposable
     /// <summary>Fired when a client connects. Used to trigger function registration.</summary>
     public Action? OnClientConnected { get; set; }
 
-    public TcpBridge(int port = 9500)
+    public TcpBridge(string host = "0.0.0.0", int port = 9500)
     {
+        _host = host;
         _port = port;
     }
 
@@ -42,9 +44,10 @@ public sealed class TcpBridge : IDisposable
     /// </summary>
     public async Task StartAsync(CancellationToken ct)
     {
-        _listener = new TcpListener(IPAddress.Loopback, _port);
+        var ip = IPAddress.Parse(_host);
+        _listener = new TcpListener(ip, _port);
         _listener.Start();
-        Console.WriteLine($"[TcpBridge] Listening on 127.0.0.1:{_port}");
+        Console.WriteLine($"[TcpBridge] Listening on {_host}:{_port}");
 
         ct.Register(() =>
         {

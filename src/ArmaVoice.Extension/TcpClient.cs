@@ -20,6 +20,16 @@ public sealed class TcpClient : IDisposable
 
     public bool IsConnected => _isConnected;
 
+    internal static void Log(string msg)
+    {
+        try
+        {
+            var line = $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n";
+            File.AppendAllText("arma3_mic_ext.log", line);
+        }
+        catch { }
+    }
+
     public TcpClient(CommandQueue inbound)
     {
         _inbound = inbound;
@@ -32,14 +42,18 @@ public sealed class TcpClient : IDisposable
     {
         lock (_connectLock)
         {
-            // Clean up any existing connection first
+            Log($"Connect called with: '{hostPort}'");
             CleanupConnection();
 
             var parts = hostPort.Split(':');
             if (parts.Length != 2 || !int.TryParse(parts[1], out var port))
+            {
+                Log($"Connect failed: invalid host:port format '{hostPort}'");
                 return;
+            }
 
             var host = parts[0];
+            Log($"Connecting to {host}:{port}...");
 
             try
             {
@@ -59,9 +73,11 @@ public sealed class TcpClient : IDisposable
                     Name = "ArmaVoice.TcpReader"
                 };
                 _readerThread.Start();
+                Log($"Connected to {host}:{port}");
             }
-            catch
+            catch (Exception ex)
             {
+                Log($"Connect failed: {ex.Message}");
                 CleanupConnection();
             }
         }
@@ -74,6 +90,7 @@ public sealed class TcpClient : IDisposable
     {
         lock (_connectLock)
         {
+            Log("Disconnect called");
             CleanupConnection();
         }
     }
@@ -92,8 +109,9 @@ public sealed class TcpClient : IDisposable
             {
                 _writer.WriteLine(message);
             }
-            catch
+            catch (Exception ex)
             {
+                Log($"Send error: {ex.Message}");
                 _isConnected = false;
             }
         }
@@ -139,12 +157,13 @@ public sealed class TcpClient : IDisposable
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Connection error — fall through to cleanup
+            Log($"Reader error: {ex.Message}");
         }
         finally
         {
+            Log("Reader loop ended, disconnected");
             _isConnected = false;
         }
     }

@@ -17,6 +17,7 @@ public static class Exports
     [UnmanagedCallersOnly(EntryPoint = "RVExtensionVersion")]
     public static void RVExtensionVersion(nint output, int outputSize)
     {
+        TcpClient.Log("RVExtensionVersion called");
         WriteOutput(output, outputSize, "1.0.0");
     }
 
@@ -52,7 +53,11 @@ public static class Exports
         {
             case "connect":
                 if (args.Length >= 1)
+                {
+                    TcpClient.Log($"RVExtensionArgs: connect({args[0]})");
                     Client.Connect(args[0]);
+                    WriteOutput(output, outputSize, Client.IsConnected ? "1" : "0");
+                }
                 break;
 
             case "state":

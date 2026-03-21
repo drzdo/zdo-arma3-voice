@@ -31,14 +31,14 @@ public class Program
 
         var config = AppConfig.Load(configPath);
 
-        Console.WriteLine($"[Server] Port: {config.Server.Port}");
+        Console.WriteLine($"[Server] Listen: {config.Server.Host}:{config.Server.Port}");
         Console.WriteLine($"[Server] STT: {config.Stt.System}");
         Console.WriteLine($"[Server] TTS: {config.Tts.System}");
         Console.WriteLine($"[Server] LLM intent: {config.Llm.Intent.System}");
         Console.WriteLine($"[Server] LLM dialogue: {config.Llm.Dialogue.System}");
 
         // Core infrastructure
-        var bridge = new TcpBridge(config.Server.Port);
+        var bridge = new TcpBridge(config.Server.Host, config.Server.Port);
         var rpcClient = new RpcClient(bridge);
         var gameState = new GameState();
         var unitRegistry = new UnitRegistry(rpcClient);
