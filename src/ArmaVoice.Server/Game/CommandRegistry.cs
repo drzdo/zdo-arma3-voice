@@ -29,7 +29,7 @@ public class CommandRegistry
     {
         if (!Directory.Exists(commandsDir))
         {
-            Console.WriteLine($"[CommandRegistry] Commands directory not found: {commandsDir}");
+            Log.Warn("CommandRegistry", $"Commands directory not found: {commandsDir}");
             return;
         }
 
@@ -46,19 +46,19 @@ public class CommandRegistry
                 var cmd = deserializer.Deserialize<CommandDefinition>(yaml);
                 if (string.IsNullOrEmpty(cmd.Id))
                 {
-                    Console.WriteLine($"[CommandRegistry] Skipping {file}: missing 'id'");
+                    Log.Warn("CommandRegistry", $"Skipping {file}: missing 'id'");
                     continue;
                 }
                 _commands[cmd.Id] = cmd;
-                Console.WriteLine($"[CommandRegistry] Loaded command: {cmd.Id}");
+                Log.Info("CommandRegistry", $"Loaded command: {cmd.Id}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[CommandRegistry] Error loading {file}: {ex.Message}");
+                Log.Error("CommandRegistry", $"Error loading {file}: {ex.Message}");
             }
         }
 
-        Console.WriteLine($"[CommandRegistry] {_commands.Count} commands loaded.");
+        Log.Info("CommandRegistry", $"{_commands.Count} commands loaded.");
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public class CommandRegistry
     {
         if (!Directory.Exists(functionsDir))
         {
-            Console.WriteLine($"[CommandRegistry] Functions directory not found: {functionsDir}");
+            Log.Warn("CommandRegistry", $"Functions directory not found: {functionsDir}");
             return;
         }
 
@@ -78,10 +78,10 @@ public class CommandRegistry
             var funcName = Path.GetFileNameWithoutExtension(file);
             var body = File.ReadAllText(file).Trim();
             _functions[funcName] = body;
-            Console.WriteLine($"[CommandRegistry] Loaded function: {funcName}");
+            Log.Info("CommandRegistry", $"Loaded function: {funcName}");
         }
 
-        Console.WriteLine($"[CommandRegistry] {_functions.Count} functions loaded.");
+        Log.Info("CommandRegistry", $"{_functions.Count} functions loaded.");
     }
 
     /// <summary>
@@ -89,15 +89,15 @@ public class CommandRegistry
     /// </summary>
     public void RegisterFunctions(RpcClient rpc)
     {
-        Console.WriteLine($"[CommandRegistry] Registering {_functions.Count} functions...");
+        Log.Info("CommandRegistry", $"Registering {_functions.Count} functions...");
         foreach (var (name, body) in _functions)
         {
             // Wrap body in single quotes for compileFinal
             var sqf = $"{name} = compileFinal '{body}'";
             rpc.Fire(sqf);
-            Console.WriteLine($"[CommandRegistry]   {name}");
+            Log.Info("CommandRegistry", $"  {name}");
         }
-        Console.WriteLine("[CommandRegistry] Done.");
+        Log.Info("CommandRegistry", "Done.");
     }
 
     /// <summary>

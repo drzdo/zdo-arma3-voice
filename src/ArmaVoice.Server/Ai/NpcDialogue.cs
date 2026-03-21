@@ -7,14 +7,16 @@ namespace ArmaVoice.Server.Ai;
 public class NpcDialogue
 {
     private readonly ILlmClient _llm;
+    private readonly string _sessionContext;
     private readonly Dictionary<string, List<LlmMessage>> _history = new();
 
     private const int MaxHistoryPerNpc = 10;
     private const int HistoryContextCount = 5;
 
-    public NpcDialogue(ILlmClient llm)
+    public NpcDialogue(ILlmClient llm, string sessionContext = "")
     {
         _llm = llm;
+        _sessionContext = sessionContext;
     }
 
     public async Task<string> GenerateResponseAsync(
@@ -38,12 +40,12 @@ public class NpcDialogue
 
             Nearby units:
             {nearbyContext}
-
+            {(string.IsNullOrWhiteSpace(_sessionContext) ? "" : $"\n            Mission context: {_sessionContext}\n")}
             Guidelines:
             - Respond naturally as this character would in a military setting.
             - Keep responses concise (1-3 sentences). Soldiers are brief on comms.
             - Use appropriate military terminology for your side and role.
-            - Reference nearby units and the tactical situation when relevant.
+            - ONLY reference units and things that are in the nearby units list above. Do NOT invent or imagine enemies, civilians, vehicles, or anything not listed. If you don't know, say you don't know.
             - Do not break character or reference game mechanics.
             - Do not use quotation marks around your own speech.
             """;
@@ -74,7 +76,7 @@ public class NpcDialogue
         if (_history[npcNetId].Count > MaxHistoryPerNpc * 2)
             _history[npcNetId] = _history[npcNetId][^(MaxHistoryPerNpc * 2)..];
 
-        Console.WriteLine($"[NpcDialogue] {npcName}: \"{npcResponse[..Math.Min(80, npcResponse.Length)]}\"");
+        Log.Info("NpcDialogue", $"{npcName}: \"{npcResponse[..Math.Min(80, npcResponse.Length)]}\"");
         return npcResponse;
     }
 }

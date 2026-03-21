@@ -52,7 +52,7 @@ public class GameState
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GameState] Error parsing state: {ex.Message}");
+            Log.Error("GameState", $"Error parsing state: {ex.Message}");
         }
     }
 }

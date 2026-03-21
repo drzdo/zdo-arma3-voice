@@ -46,7 +46,7 @@ public class ClaudeLlmClient : ILlmClient
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[Claude] API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
+                Log.Error("Claude", $"API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
                 return null;
             }
 
@@ -58,7 +58,7 @@ public class ClaudeLlmClient : ILlmClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Claude] Error: {ex.Message}");
+            Log.Error("Claude", $"Error: {ex.Message}");
             return null;
         }
     }

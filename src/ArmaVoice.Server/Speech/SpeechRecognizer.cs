@@ -57,7 +57,7 @@ public class WhisperRecognizer : ISpeechRecognizer
 
         _waveIn.StartRecording();
         _recording = true;
-        Console.WriteLine("[SpeechRecognizer] Recording started.");
+        Log.Info("SpeechRecognizer", "Recording started.");
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public class WhisperRecognizer : ISpeechRecognizer
 
         _waveIn.StopRecording();
         _recording = false;
-        Console.WriteLine("[SpeechRecognizer] Recording stopped.");
+        Log.Info("SpeechRecognizer", "Recording stopped.");
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public class WhisperRecognizer : ISpeechRecognizer
             samples[i] = sample / 32768f;
         }
 
-        Console.WriteLine($"[SpeechRecognizer] Transcribing {sampleCount} samples ({sampleCount / 16000.0:F1}s)...");
+        Log.Info("SpeechRecognizer", $"Transcribing {sampleCount} samples ({sampleCount / 16000.0:F1}s)...");
 
         var result = new System.Text.StringBuilder();
         await foreach (var segment in _processor.ProcessAsync(samples))
@@ -111,7 +111,7 @@ public class WhisperRecognizer : ISpeechRecognizer
         }
 
         var text = result.ToString().Trim();
-        Console.WriteLine($"[SpeechRecognizer] Transcription: \"{text}\"");
+        Log.Info("SpeechRecognizer", $"Transcription: \"{text}\"");
         return text;
     }
 

@@ -34,22 +34,22 @@ public class PiperSynthesizer : ISpeechSynthesizer
             response.EnsureSuccessStatusCode();
 
             var wavBytes = await response.Content.ReadAsByteArrayAsync();
-            Console.WriteLine($"[SpeechSynthesizer] Synthesized {wavBytes.Length} bytes for: \"{text[..Math.Min(50, text.Length)]}\"");
+            Log.Info("PiperTTS", $"Synthesized {wavBytes.Length} bytes for: \"{text[..Math.Min(50, text.Length)]}\"");
             return wavBytes;
         }
         catch (HttpRequestException ex)
         {
-            Console.WriteLine($"[SpeechSynthesizer] Piper TTS unavailable at {_piperUrl}: {ex.Message}");
+            Log.Error("PiperTTS", $"Piper TTS unavailable at {_piperUrl}: {ex.Message}");
             return [];
         }
         catch (TaskCanceledException)
         {
-            Console.WriteLine($"[SpeechSynthesizer] Piper TTS request timed out for: \"{text[..Math.Min(50, text.Length)]}\"");
+            Log.Warn("PiperTTS", $"Piper TTS request timed out for: \"{text[..Math.Min(50, text.Length)]}\"");
             return [];
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SpeechSynthesizer] TTS error: {ex.Message}");
+            Log.Error("PiperTTS", $"TTS error: {ex.Message}");
             return [];
         }
     }

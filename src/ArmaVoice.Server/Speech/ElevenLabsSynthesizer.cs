@@ -41,7 +41,7 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
         var voiceId = ResolveVoiceId(context);
         if (string.IsNullOrEmpty(voiceId))
         {
-            Console.WriteLine("[ElevenLabsSynthesizer] No voice ID resolved. Check tts.elevenlabs.voices config.");
+            Log.Warn("ElevenLabs", "No voice ID resolved. Check tts.elevenlabs.voices config.");
             return [];
         }
 
@@ -74,16 +74,16 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
             if (!response.IsSuccessStatusCode)
             {
                 var errorText = Encoding.UTF8.GetString(body[..Math.Min(200, body.Length)]);
-                Console.WriteLine($"[ElevenLabsSynthesizer] API error ({response.StatusCode}): {errorText}");
+                Log.Error("ElevenLabs", $"API error ({response.StatusCode}): {errorText}");
                 return [];
             }
 
-            Console.WriteLine($"[ElevenLabsSynthesizer] Synthesized {body.Length} bytes (voice={voiceId[..8]}...) for: \"{text[..Math.Min(50, text.Length)]}\"");
+            Log.Info("ElevenLabs", $"Synthesized {body.Length} bytes (voice={voiceId[..8]}...) for: \"{text[..Math.Min(50, text.Length)]}\"");
             return body;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ElevenLabsSynthesizer] Error: {ex.Message}");
+            Log.Error("ElevenLabs", $"Error: {ex.Message}");
             return [];
         }
     }

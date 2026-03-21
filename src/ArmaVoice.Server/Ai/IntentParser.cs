@@ -84,22 +84,39 @@ public class IntentParser
 {
     private readonly ILlmClient _llm;
     private readonly string _commandPromptSection;
+    private readonly string _sessionContext;
 
-    public IntentParser(ILlmClient llm, string commandPromptSection)
+    public IntentParser(ILlmClient llm, string commandPromptSection, string sessionContext = "")
     {
         _llm = llm;
         _commandPromptSection = commandPromptSection;
+        _sessionContext = sessionContext;
     }
 
     public async Task<IntentParsed?> ParseAsync(string speechText, List<UnitSummary> knownUnits)
     {
-        var unitContext = string.Join("\n", knownUnits.Select(u =>
-            $"  - netId=\"{u.NetId}\" name=\"{u.Name}\" side={u.Side} type={u.UnitType} sameGroup={u.SameGroup}"));
+        var squadMembers = knownUnits.Where(u => u.SameGroup).ToList();
+        var others = knownUnits.Where(u => !u.SameGroup).ToList();
+
+        var squadContext = string.Join("\n", squadMembers.Select((u, i) =>
+            $"  #{i + 1} netId=\"{u.NetId}\" name=\"{u.Name}\" type={u.UnitType}"));
+
+        var othersContext = others.Count > 0
+            ? "\n  Other units nearby:\n" + string.Join("\n", others.Select(u =>
+                $"  - netId=\"{u.NetId}\" name=\"{u.Name}\" side={u.Side} type={u.UnitType}"))
+            : "";
+
+        var unitContext = $"  Player's squad (in order):\n{squadContext}{othersContext}";
+
+        var sessionBlock = string.IsNullOrWhiteSpace(_sessionContext)
+            ? ""
+            : $"\n            Mission context: {_sessionContext}\n";
 
         var systemPrompt = $"""
             You are a military voice command parser for Arma 3.
             Parse the player's speech into a structured JSON command.
             The player may speak in any language (English, Russian, etc).
+            {sessionBlock}
 
             IMPORTANT: The LLM does ALL parsing. Return final values ready for execution.
             Do NOT return raw text — return structured, normalized values.
@@ -119,7 +136,7 @@ public class IntentParser
               - "all" = entire squad.
               - Team color names: "red","green","blue","yellow" = Arma team colors.
               - Team numbers map to colors: group/team 1 = "red", 2 = "green", 3 = "blue", 4 = "yellow".
-              - If the player says "second"/"третий"/ordinal, find the Nth unit (sameGroup=true) and return its netId.
+              - If the player says "second"/"второй"/"третий"/ordinal, use the squad # number above. "Second"/"второй" = #2, "third"/"третий" = #3, etc. Return that unit's netId.
               - If the player says a name, find it and return its netId.
               - Default to ["all"] if not specified.
 
@@ -152,18 +169,18 @@ public class IntentParser
 
             if (intent == null)
             {
-                Console.WriteLine($"[IntentParser] Bad JSON from LLM, retrying with fix prompt...");
+                Log.Warn("IntentParser", "Bad JSON from LLM, retrying with fix prompt...");
                 intent = await RetryWithFixPromptAsync(json);
             }
 
             if (intent != null)
-                Console.WriteLine($"[IntentParser] action={intent.Action} units=[{string.Join(",", intent.Units)}] location={intent.Location?.Type} target={intent.Target} stance={intent.Stance} speed={intent.Speed}");
+                Log.Info("IntentParser", $"action={intent.Action} units=[{string.Join(",", intent.Units)}] location={intent.Location?.Type} target={intent.Target} stance={intent.Stance} speed={intent.Speed}");
 
             return intent;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[IntentParser] Error: {ex.Message}");
+            Log.Error("IntentParser", $"Error: {ex.Message}");
             return null;
         }
     }
@@ -192,15 +209,15 @@ public class IntentParser
             var intent = TryParseIntent(json);
 
             if (intent != null)
-                Console.WriteLine("[IntentParser] Retry succeeded.");
+                Log.Info("IntentParser", "Retry succeeded.");
             else
-                Console.WriteLine($"[IntentParser] Retry also failed: {json[..Math.Min(80, json.Length)]}");
+                Log.Warn("IntentParser", $"Retry also failed: {json[..Math.Min(80, json.Length)]}");
 
             return intent;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[IntentParser] Retry error: {ex.Message}");
+            Log.Error("IntentParser", $"Retry error: {ex.Message}");
             return null;
         }
     }

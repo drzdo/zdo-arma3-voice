@@ -1,0 +1,5 @@
+id: stance
+description: "Change unit stance/posture. Triggers: 'stand up'/'встань'/'стоя' (stance=UP), 'crouch'/'присядь' (stance=MIDDLE), 'prone'/'ложись' (stance=DOWN), 'auto'/'авто' (stance=AUTO). Also 'бегом' = UP + speed FULL. LLM must set 'stance' field to DOWN/MIDDLE/UP/AUTO."
+sqf: |
+  [_units, _stance] call zdoArmaMic_fnc_setStance;
+  if (_speed != "") then { [_speed] call zdoArmaMic_fnc_setSpeed };

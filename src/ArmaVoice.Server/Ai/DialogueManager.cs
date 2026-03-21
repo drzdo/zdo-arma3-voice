@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using NAudio.Wave;
 using ArmaVoice.Server.Audio;
 using ArmaVoice.Server.Game;
 using ArmaVoice.Server.Speech;
@@ -49,17 +50,17 @@ public class DialogueManager
     public void Enqueue(string targetNetId, string playerText)
     {
         _queue.Writer.TryWrite(new DialogueRequest(targetNetId, playerText));
-        Console.WriteLine($"[DialogueManager] Enqueued dialogue with {targetNetId}");
+        Log.Info("DialogueManager", $"Enqueued dialogue with {targetNetId}");
     }
 
     public async Task RunAsync(CancellationToken ct)
     {
-        Console.WriteLine("[DialogueManager] Started.");
+        Log.Info("DialogueManager", "Started.");
         await foreach (var request in _queue.Reader.ReadAllAsync(ct))
         {
             try { await ProcessDialogueAsync(request, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-            catch (Exception ex) { Console.WriteLine($"[DialogueManager] Error: {ex.Message}"); }
+            catch (Exception ex) { Log.Error("DialogueManager", $"Error: {ex.Message}"); }
         }
     }
 
@@ -68,7 +69,7 @@ public class DialogueManager
         var unit = _unitRegistry.GetUnit(request.TargetNetId);
         if (unit == null)
         {
-            Console.WriteLine($"[DialogueManager] Unit {request.TargetNetId} not found, skipping.");
+            Log.Warn("DialogueManager", $"Unit {request.TargetNetId} not found, skipping.");
             return;
         }
 
@@ -76,7 +77,7 @@ public class DialogueManager
         var npcRole = string.IsNullOrEmpty(unit.UnitType) ? "Infantry" : unit.UnitType;
         var npcSide = string.IsNullOrEmpty(unit.Side) ? "UNKNOWN" : unit.Side;
 
-        Console.WriteLine($"[DialogueManager] Generating response from {npcName}...");
+        Log.Info("DialogueManager", $"Generating response from {npcName}...");
 
         var nearbyUnits = _unitRegistry.GetAllUnits()
             .Where(u => u.NetId != request.TargetNetId)
@@ -93,15 +94,15 @@ public class DialogueManager
         ct.ThrowIfCancellationRequested();
 
         // 2. TTS
-        Console.WriteLine($"[DialogueManager] TTS: \"{responseText[..Math.Min(60, responseText.Length)]}\"");
+        Log.Info("DialogueManager", $"TTS: \"{responseText[..Math.Min(60, responseText.Length)]}\"");
         var voiceContext = new SpeechContext(UnitName: npcName, Side: npcSide);
         var wavBytes = await _tts.SynthesizeAsync(responseText, voiceContext);
-        if (wavBytes.Length == 0) { Console.WriteLine("[DialogueManager] TTS returned empty."); return; }
+        if (wavBytes.Length == 0) { Log.Warn("DialogueManager", "TTS returned empty."); return; }
         ct.ThrowIfCancellationRequested();
 
         // 3. Extract mono PCM
-        var (samples, sampleRate) = ExtractPcmFromWav(wavBytes);
-        if (samples.Length == 0) { Console.WriteLine("[DialogueManager] PCM extraction failed."); return; }
+        var (samples, sampleRate) = ExtractPcm(wavBytes);
+        if (samples.Length == 0) { Log.Warn("DialogueManager", "PCM extraction failed."); return; }
 
         // 4. Determine distance at start of speech
         var playerPos = _gameState.PlayerPos;
@@ -114,12 +115,12 @@ public class DialogueManager
         // 5. If far → apply radio effect to the mono samples first
         if (distance >= RadioDistanceThreshold)
         {
-            Console.WriteLine($"[DialogueManager] Radio effect (distance: {distance:F1}m)");
+            Log.Info("DialogueManager", $"Radio effect (distance: {distance:F1}m)");
             samples = _radioEffect.ApplyRadioEffect(samples, sampleRate);
         }
         else
         {
-            Console.WriteLine($"[DialogueManager] Spatial only (distance: {distance:F1}m)");
+            Log.Info("DialogueManager", $"Spatial only (distance: {distance:F1}m)");
         }
 
         // 6. Always play through real-time spatial provider
@@ -128,76 +129,64 @@ public class DialogueManager
 
         _audioPlayer.Play(spatialProvider);
 
-        Console.WriteLine($"[DialogueManager] Playing {npcName}'s response...");
+        Log.Info("DialogueManager", $"Playing {npcName}'s response...");
 
         // Wait for playback
         while (_audioPlayer.IsPlaying && !ct.IsCancellationRequested)
             await Task.Delay(100, ct);
 
-        Console.WriteLine($"[DialogueManager] Finished {npcName}.");
+        Log.Info("DialogueManager", $"Finished {npcName}.");
     }
 
-    private static (float[] Samples, int SampleRate) ExtractPcmFromWav(byte[] wav)
+    /// <summary>
+    /// Extract mono float PCM from audio bytes. Handles WAV, MP3 via NAudio.
+    /// </summary>
+    private static (float[] Samples, int SampleRate) ExtractPcm(byte[] audioData)
     {
-        if (wav.Length < 44) return ([], 0);
+        if (audioData.Length < 4) return ([], 0);
 
-        int channels = BitConverter.ToInt16(wav, 22);
-        int sampleRate = BitConverter.ToInt32(wav, 24);
-        int bitsPerSample = BitConverter.ToInt16(wav, 34);
-
-        // Find "data" chunk
-        int dataOffset = 12;
-        int dataSize = 0;
-        while (dataOffset + 8 <= wav.Length)
+        try
         {
-            var chunkId = System.Text.Encoding.ASCII.GetString(wav, dataOffset, 4);
-            var chunkSize = BitConverter.ToInt32(wav, dataOffset + 4);
-            if (chunkId == "data")
+            using var ms = new MemoryStream(audioData);
+            WaveStream reader;
+
+            // Detect format by header
+            if (audioData[0] == 'R' && audioData[1] == 'I' && audioData[2] == 'F' && audioData[3] == 'F')
+                reader = new WaveFileReader(ms);
+            else if (audioData[0] == 0xFF || (audioData[0] == 0x49 && audioData[1] == 0x44 && audioData[2] == 0x33))
+                reader = new Mp3FileReader(ms);
+            else
             {
-                dataOffset += 8;
-                dataSize = Math.Min(chunkSize, wav.Length - dataOffset);
-                break;
+                Log.Warn("DialogueManager", $"Unknown audio format: 0x{audioData[0]:X2}{audioData[1]:X2}");
+                return ([], 0);
             }
-            dataOffset += 8 + chunkSize;
-        }
 
-        if (dataSize == 0) return ([], 0);
-
-        float[] mono;
-        if (bitsPerSample == 16)
-        {
-            int frames = dataSize / 2 / channels;
-            mono = new float[frames];
-            for (int i = 0; i < frames; i++)
+            using (reader)
             {
-                float sum = 0;
-                for (int ch = 0; ch < channels; ch++)
+                var sampleProvider = reader.ToSampleProvider();
+
+                // Mix to mono if stereo
+                if (sampleProvider.WaveFormat.Channels > 1)
+                    sampleProvider = sampleProvider.ToMono();
+
+                var sampleRate = sampleProvider.WaveFormat.SampleRate;
+                var samples = new List<float>();
+                var buffer = new float[4096];
+                int read;
+                while ((read = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    int idx = dataOffset + (i * channels + ch) * 2;
-                    if (idx + 1 < wav.Length)
-                        sum += BitConverter.ToInt16(wav, idx) / 32768f;
+                    for (int i = 0; i < read; i++)
+                        samples.Add(buffer[i]);
                 }
-                mono[i] = sum / channels;
-            }
-        }
-        else if (bitsPerSample == 32)
-        {
-            int frames = dataSize / 4 / channels;
-            mono = new float[frames];
-            for (int i = 0; i < frames; i++)
-            {
-                float sum = 0;
-                for (int ch = 0; ch < channels; ch++)
-                {
-                    int idx = dataOffset + (i * channels + ch) * 4;
-                    if (idx + 3 < wav.Length)
-                        sum += BitConverter.ToSingle(wav, idx);
-                }
-                mono[i] = sum / channels;
-            }
-        }
-        else return ([], 0);
 
-        return (mono, sampleRate);
+                Log.Info("DialogueManager", $"Extracted {samples.Count} samples at {sampleRate}Hz from {audioData.Length} bytes");
+                return (samples.ToArray(), sampleRate);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("DialogueManager", $"PCM extraction failed: {ex.Message}");
+            return ([], 0);
+        }
     }
 }

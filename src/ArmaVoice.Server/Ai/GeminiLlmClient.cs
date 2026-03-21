@@ -58,7 +58,7 @@ public class GeminiLlmClient : ILlmClient
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[Gemini] API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
+                Log.Error("Gemini", $"API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
                 return null;
             }
 
@@ -74,7 +74,7 @@ public class GeminiLlmClient : ILlmClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Gemini] Error: {ex.Message}");
+            Log.Error("Gemini", $"Error: {ex.Message}");
             return null;
         }
     }

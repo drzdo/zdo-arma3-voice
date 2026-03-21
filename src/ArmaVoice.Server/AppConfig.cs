@@ -9,6 +9,11 @@ public class AppConfig
     public SttConfig Stt { get; set; } = new();
     public TtsConfig Tts { get; set; } = new();
     public LlmConfig Llm { get; set; } = new();
+    /// <summary>
+    /// Optional mission/session context added to LLM prompts.
+    /// Describe what's happening: who vs whom, objectives, setting, etc.
+    /// </summary>
+    public string Prompt { get; set; } = "";
 
     public static AppConfig Load(string path)
     {
@@ -25,7 +30,7 @@ public class AppConfig
             ?? throw new InvalidOperationException("Failed to parse config file.");
 
         config.Validate();
-        Console.WriteLine($"[Config] Loaded from {path}");
+        Log.Info("Config", $"Loaded from {path}");
         return config;
     }
 

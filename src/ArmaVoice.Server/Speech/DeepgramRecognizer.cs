@@ -62,7 +62,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
 
         _waveIn.StartRecording();
         _recording = true;
-        Console.WriteLine("[DeepgramRecognizer] Recording started.");
+        Log.Info("Deepgram", "Recording started.");
     }
 
     public void StopRecording()
@@ -71,7 +71,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
 
         _waveIn.StopRecording();
         _recording = false;
-        Console.WriteLine("[DeepgramRecognizer] Recording stopped.");
+        Log.Info("Deepgram", "Recording stopped.");
     }
 
     public async Task<string> TranscribeAsync()
@@ -87,7 +87,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
             _audioBuffer.Seek(0, SeekOrigin.Begin);
         }
 
-        Console.WriteLine($"[DeepgramRecognizer] Sending {rawPcm.Length / 2} samples ({rawPcm.Length / 2 / (float)_sampleRate:F1}s) to Deepgram...");
+        Log.Info("Deepgram", $"Sending {rawPcm.Length / 2} samples ({rawPcm.Length / 2 / (float)_sampleRate:F1}s) to Deepgram...");
 
         // Build WAV in memory (Deepgram accepts raw WAV)
         var wavBytes = BuildWav(rawPcm, _sampleRate, 16, 1);
@@ -104,7 +104,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[DeepgramRecognizer] API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
+                Log.Error("Deepgram", $"API error ({response.StatusCode}): {body[..Math.Min(200, body.Length)]}");
                 return "";
             }
 
@@ -116,12 +116,12 @@ public class DeepgramRecognizer : ISpeechRecognizer
                 .GetProperty("transcript")
                 .GetString() ?? "";
 
-            Console.WriteLine($"[DeepgramRecognizer] Transcription: \"{transcript}\"");
+            Log.Info("Deepgram", $"Transcription: \"{transcript}\"");
             return transcript;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DeepgramRecognizer] Error: {ex.Message}");
+            Log.Error("Deepgram", $"Error: {ex.Message}");
             return "";
         }
     }

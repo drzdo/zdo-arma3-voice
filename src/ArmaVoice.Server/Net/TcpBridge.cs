@@ -45,7 +45,7 @@ public sealed class TcpBridge : IDisposable
         var ip = IPAddress.Parse(_host);
         _listener = new TcpListener(ip, _port);
         _listener.Start();
-        Console.WriteLine($"[TcpBridge] Listening on {_host}:{_port}");
+        Log.Info("TcpBridge", $"Listening on {_host}:{_port}");
 
         ct.Register(() => _listener.Stop());
 
@@ -53,9 +53,9 @@ public sealed class TcpBridge : IDisposable
         {
             try
             {
-                Console.WriteLine("[TcpBridge] Waiting for client...");
+                Log.Info("TcpBridge", "Waiting for client...");
                 var client = await _listener.AcceptTcpClientAsync(ct);
-                Console.WriteLine($"[TcpBridge] Client connected from {client.Client.RemoteEndPoint}");
+                Log.Info("TcpBridge", $"Client connected from {client.Client.RemoteEndPoint}");
                 await HandleClientAsync(client, ct);
             }
             catch (OperationCanceledException) { break; }
@@ -63,13 +63,13 @@ public sealed class TcpBridge : IDisposable
             catch (SocketException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
-                Console.WriteLine($"[TcpBridge] Accept error: {ex.Message}");
+                Log.Error("TcpBridge", $"Accept error: {ex.Message}");
                 if (!ct.IsCancellationRequested)
                     await Task.Delay(1000, ct).ConfigureAwait(false);
             }
         }
 
-        Console.WriteLine("[TcpBridge] Stopped listening.");
+        Log.Info("TcpBridge", "Stopped listening.");
     }
 
     /// <summary>
@@ -79,6 +79,8 @@ public sealed class TcpBridge : IDisposable
     {
         var obj = new JsonObject { ["id"] = id, ["sqf"] = sqf };
         SendLine(obj.ToJsonString());
+
+        Log.Sqf(id, sqf);
     }
 
     private void SendLine(string line)
@@ -92,7 +94,7 @@ public sealed class TcpBridge : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[TcpBridge] Write error: {ex.Message}");
+                Log.Error("TcpBridge", $"Write error: {ex.Message}");
                 IsClientConnected = false;
             }
         }
@@ -154,24 +156,24 @@ public sealed class TcpBridge : IDisposable
                             break;
 
                         default:
-                            Console.WriteLine($"[TcpBridge] Unknown type: {type}");
+                            Log.Warn("TcpBridge", $"Unknown type: {type}");
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[TcpBridge] Parse error: {ex.Message} | {line[..Math.Min(80, line.Length)]}");
+                    Log.Error("TcpBridge", $"Parse error: {ex.Message} | {line[..Math.Min(80, line.Length)]}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[TcpBridge] Client error: {ex.Message}");
+            Log.Error("TcpBridge", $"Client error: {ex.Message}");
         }
         finally
         {
             lock (_writeLock) { CleanupClient(); }
-            Console.WriteLine("[TcpBridge] Client disconnected.");
+            Log.Info("TcpBridge", "Client disconnected.");
         }
     }
 

@@ -89,7 +89,7 @@ public class RpcClient
         }
         else
         {
-            Console.WriteLine($"[RpcClient] No pending request for response id={id}");
+            Log.Warn("RpcClient", $"No pending request for response id={id}");
         }
     }
 }

@@ -93,6 +93,6 @@ public static class Exports
 
     private static string ReadString(nint ptr)
     {
-        return Marshal.PtrToStringAnsi(ptr) ?? "";
+        return Marshal.PtrToStringUTF8(ptr) ?? "";
     }
 }

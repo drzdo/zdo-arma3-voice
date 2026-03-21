@@ -33,22 +33,22 @@ public class CommandExecutor
         if (actionId == "dialogue")
         {
             var npcNetId = ResolveUnitRef(intent.Target);
-            if (npcNetId == null) { Log("Dialogue", $"target \"{intent.Target}\" not found."); return; }
+            if (npcNetId == null) { LogCmd("Dialogue", $"target \"{intent.Target}\" not found."); return; }
             _dialogueManager.Enqueue(npcNetId, intent.Text ?? "");
-            Log("Dialogue", $"queued → {npcNetId}");
+            LogCmd("Dialogue", $"queued → {npcNetId}");
             return;
         }
 
         // Look up command definition
         if (!_commandRegistry.Commands.TryGetValue(actionId, out var cmd))
         {
-            Log(actionId, "unknown command (not found in commands/)");
+            LogCmd(actionId, "unknown command (not found in commands/)");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(cmd.Sqf))
         {
-            Log(actionId, "command has no SQF");
+            LogCmd(actionId, "command has no SQF");
             return;
         }
 
@@ -75,7 +75,7 @@ public class CommandExecutor
             """;
 
         _rpc.Fire(sqf);
-        Log(actionId, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr} stance={stance} speed={speed}");
+        LogCmd(actionId, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr} stance={stance} speed={speed}");
     }
 
     // ── Unit resolution ──────────────────────────────────
@@ -105,7 +105,7 @@ public class CommandExecutor
 
             var unit = _unitRegistry.FindByName(r);
             if (unit != null) result.Add(unit.NetId);
-            else Console.WriteLine($"[Cmd] Could not resolve unit: \"{r}\"");
+            else Log.Warn("Cmd", $"Could not resolve unit: \"{r}\"");
         }
         return result;
     }
@@ -132,7 +132,7 @@ public class CommandExecutor
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Cmd] Failed to resolve team {teamColor}: {ex.Message}");
+            Log.Error("Cmd", $"Failed to resolve team {teamColor}: {ex.Message}");
             return [];
         }
     }
@@ -179,5 +179,5 @@ public class CommandExecutor
         ? string.Format(CultureInfo.InvariantCulture, "[{0:F1},{1:F1},{2:F1}]", p[0], p[1], p[2])
         : "[0,0,0]";
 
-    private static void Log(string action, string msg) => Console.WriteLine($"[Cmd] {action}: {msg}");
+    private static void LogCmd(string action, string msg) => Log.Info("Cmd", $"{action}: {msg}");
 }

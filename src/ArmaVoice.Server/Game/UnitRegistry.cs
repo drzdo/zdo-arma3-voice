@@ -140,7 +140,7 @@ public class UnitRegistry
 
             if (string.IsNullOrEmpty(result) || result == "null")
             {
-                Console.WriteLine("[UnitRegistry] Squad sync: no data (function not ready yet?)");
+                Log.Warn("UnitRegistry", "Squad sync: no data (function not ready yet?)");
                 return;
             }
 
@@ -149,7 +149,7 @@ public class UnitRegistry
             var arr = doc.RootElement;
             if (arr.ValueKind != JsonValueKind.Array)
             {
-                Console.WriteLine($"[UnitRegistry] Squad data not an array: {result[..Math.Min(80, result.Length)]}");
+                Log.Warn("UnitRegistry", $"Squad data not an array: {result[..Math.Min(80, result.Length)]}");
                 return;
             }
 
@@ -185,11 +185,11 @@ public class UnitRegistry
                 }
             }
 
-            Console.WriteLine($"[UnitRegistry] Squad synced: {arr.GetArrayLength()} members.");
+            Log.Info("UnitRegistry", $"Squad synced: {arr.GetArrayLength()} members.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[UnitRegistry] Squad sync failed: {ex.Message}");
+            Log.Error("UnitRegistry", $"Squad sync failed: {ex.Message}");
         }
     }
 
@@ -216,7 +216,7 @@ public class UnitRegistry
             foreach (var netId in staleIds)
             {
                 _units.Remove(netId);
-                Console.WriteLine($"[UnitRegistry] Evicted stale unit: {netId}");
+                Log.Info("UnitRegistry", $"Evicted stale unit: {netId}");
             }
         }
     }
@@ -239,7 +239,7 @@ public class UnitRegistry
             var arr = doc.RootElement;
             if (arr.ValueKind != JsonValueKind.Array || arr.GetArrayLength() < 5)
             {
-                Console.WriteLine($"[UnitRegistry] Invalid unit info for {netId}: {result[..Math.Min(80, result.Length)]}");
+                Log.Warn("UnitRegistry", $"Invalid unit info for {netId}: {result[..Math.Min(80, result.Length)]}");
                 return;
             }
 
@@ -255,16 +255,16 @@ public class UnitRegistry
                 info.Rank = arr[4].TryGetInt32(out var r) ? r : 0;
                 info.InfoLoaded = true;
 
-                Console.WriteLine($"[UnitRegistry] Loaded info for {netId}: {info.Name} ({info.Side}, {info.UnitType})");
+                Log.Info("UnitRegistry", $"Loaded info for {netId}: {info.Name} ({info.Side}, {info.UnitType})");
             }
         }
         catch (TimeoutException)
         {
-            Console.WriteLine($"[UnitRegistry] Timeout loading info for {netId}");
+            Log.Warn("UnitRegistry", $"Timeout loading info for {netId}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[UnitRegistry] Error loading info for {netId}: {ex.Message}");
+            Log.Error("UnitRegistry", $"Error loading info for {netId}: {ex.Message}");
         }
     }
 }

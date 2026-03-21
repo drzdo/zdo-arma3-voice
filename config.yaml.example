@@ -2,6 +2,11 @@ server:
   host: 0.0.0.0
   port: 9500
 
+# Optional mission/session context — added to all LLM prompts.
+# Describe the scenario so NPCs and intent parsing have context.
+# prompt: "NATO forces patrol Malden island. CSAT insurgents operate in the south. Our squad is recon team Alpha."
+prompt: ""
+
 stt:
   system: whisper  # whisper | deepgram
   whisper:
