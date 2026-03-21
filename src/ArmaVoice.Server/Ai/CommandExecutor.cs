@@ -36,10 +36,11 @@ public class CommandExecutor
 
     public async Task ExecuteAsync(IntentParsed intent, float[] lookTarget)
     {
-        var actionId = intent.Action.ToLowerInvariant();
+        // Support multiple actions: "behaviour,holdfire"
+        var actionIds = intent.Action.ToLowerInvariant().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        // Dialogue is the only true special case — needs full LLM conversation
-        if (actionId == "dialogue")
+        // Dialogue is the only true special case
+        if (actionIds is ["dialogue"])
         {
             if (_dialogueManager == null) { LogCmd("Dialogue", "disabled"); return; }
             var npcNetId = ResolveUnitRef(intent.Target);
@@ -49,12 +50,16 @@ public class CommandExecutor
             return;
         }
 
-        // Look up command
-        if (!_commandRegistry.Commands.TryGetValue(actionId, out var cmd))
+        // Resolve all commands
+        var commands = new List<CommandDefinition>();
+        foreach (var aid in actionIds)
         {
-            LogCmd(actionId, "unknown command");
-            return;
+            if (_commandRegistry.Commands.TryGetValue(aid, out var c))
+                commands.Add(c);
+            else
+                LogCmd(aid, "unknown command");
         }
+        if (commands.Count == 0) return;
 
         // Resolve standard params
         var netIds = await ResolveUnitsAsync(intent.Units);
@@ -78,7 +83,7 @@ public class CommandExecutor
         var unitsArr = string.Join(",", netIds.Select(id => $"'{id}'"));
         var posStr = FmtPos(position);
 
-        // Standard variable block — shared by sqf and prompt_sqf
+        // Standard variable block — shared across all commands in this intent
         var varsBlock = $"""
             private _units = [[{unitsArr}]] call zdoArmaMic_fnc_filterAlive;
             private _target = '{targetNetId}';
@@ -89,45 +94,45 @@ public class CommandExecutor
             private _text = '{text}';
             """;
 
-        // Execute SQF action (if any)
-        if (!string.IsNullOrWhiteSpace(cmd.Sqf))
+        // Execute all commands
+        var hasPrompt = false;
+        foreach (var cmd in commands)
         {
-            _rpc.Fire(varsBlock + cmd.Sqf.Trim());
-        }
+            if (!string.IsNullOrWhiteSpace(cmd.Sqf))
+                _rpc.Fire(varsBlock + cmd.Sqf.Trim());
 
-        // Generate voice prompt (if any) → send to DialogueManager for TTS
-        if (!string.IsNullOrWhiteSpace(cmd.PromptSqf) && _dialogueManager != null && netIds.Count > 0)
-        {
-            try
+            if (!string.IsNullOrWhiteSpace(cmd.PromptSqf) && _dialogueManager != null && netIds.Count > 0)
             {
-                var promptResult = await _rpc.CallAsync(varsBlock + cmd.PromptSqf.Trim());
-                promptResult = promptResult.Trim('"');
-
-                if (!string.IsNullOrEmpty(promptResult))
+                hasPrompt = true;
+                try
                 {
-                    var speakerNetId = netIds[0];
-                    _dialogueManager.Enqueue(speakerNetId, promptResult);
-                    LogCmd(actionId, $"voice prompt queued from {speakerNetId}");
+                    var promptResult = await _rpc.CallAsync(varsBlock + cmd.PromptSqf.Trim());
+                    promptResult = promptResult.Trim('"');
+                    if (!string.IsNullOrEmpty(promptResult))
+                    {
+                        _dialogueManager.Enqueue(netIds[0], promptResult);
+                        LogCmd(cmd.Id, $"voice prompt queued");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Cmd", $"Prompt SQF failed for {cmd.Id}: {ex.Message}");
                 }
             }
-            catch (Exception ex)
-            {
-                Log.Error("Cmd", $"Prompt SQF failed for {actionId}: {ex.Message}");
-            }
+
+            LogCmd(cmd.Id, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr}");
         }
 
-        LogCmd(actionId, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr}");
-
-        // Voice acknowledgment
-        if (_ackChance > 0 && _dialogueManager != null && netIds.Count > 0 && _rng.NextSingle() < _ackChance
-            && string.IsNullOrWhiteSpace(cmd.PromptSqf))
+        // Voice acknowledgment (skip if already has voice prompt)
+        if (_ackChance > 0 && _dialogueManager != null && netIds.Count > 0 && !hasPrompt && _rng.NextSingle() < _ackChance)
         {
             var ackNetId = netIds[_rng.Next(netIds.Count)];
             var ackUnit = _unitRegistry.GetUnit(ackNetId);
             if (ackUnit != null && !string.IsNullOrEmpty(ackUnit.Name))
             {
+                var cmdNames = string.Join("+", actionIds);
                 _dialogueManager.Enqueue(ackNetId,
-                    $"[ACK] The player ({_gameState.PlayerRank} {_gameState.PlayerName}) gave you a '{actionId}' command. Very short military ack, 1 sentence.");
+                    $"[ACK] The player ({_gameState.PlayerRank} {_gameState.PlayerName}) gave you a '{cmdNames}' command. Very short military ack, 1 sentence.");
                 Log.Info("Cmd", $"Ack from {ackUnit.Name}");
             }
         }

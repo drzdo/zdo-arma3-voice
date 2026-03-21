@@ -141,6 +141,8 @@ public class IntentParser
             === JSON SCHEMA ===
 
             action (required, string): command id from the list above.
+              If the player gives TWO commands at once (e.g. "скрытно, не стрелять" = stealth + hold fire),
+              return BOTH ids comma-separated: "behaviour,holdfire". The server will execute both.
 
             units (required, array of strings): WHO should execute.
               - Return netIds from the known units list above when you can identify the unit.
