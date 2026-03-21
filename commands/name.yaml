@@ -1,3 +1,4 @@
 id: name
-description: "Assign a custom name/label to the object the player is looking at. Triggers: 'this is Alpha', 'name this vehicle Bravo', 'это машина Альфа', 'назови это Браво'. LLM must set 'text' to the assigned name. The server saves a mapping of name → look_target position for later reference."
-sqf: ""
+description: "Assign a custom name/label to the object the player is looking at. Triggers: 'this is Alpha', 'name this vehicle Bravo', 'это машина Альфа', 'назови это Браво'. LLM must set 'text' to the assigned name."
+sqf: |
+  [_pos, _text] call zdoArmaMic_fnc_nameObject;

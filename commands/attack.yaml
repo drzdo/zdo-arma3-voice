@@ -1,4 +1,8 @@
 id: attack
-description: "Engage/fire at a target. Triggers: 'attack', 'fire at', 'engage', 'огонь', 'атаковать'."
+description: "Engage/fire at a target. Triggers: 'attack', 'fire at', 'engage', 'огонь', 'атаковать', 'attack that guy', 'огонь по нему'. Uses crosshair to find nearest enemy if no specific target named."
 sqf: |
-  [_units, _target] call zdoArmaMic_fnc_attackTarget;
+  private _t = objNull;
+  if (_target != "") then { _t = _target call BIS_fnc_objectFromNetId };
+  if (isNull _t) then { _t = [_pos] call zdoArmaMic_fnc_findEnemyAt };
+  if (isNull _t) exitWith { systemChat "No target found" };
+  { private _u = _x call BIS_fnc_objectFromNetId; _u reveal [_t, 4]; _u doFire _t } forEach _units;

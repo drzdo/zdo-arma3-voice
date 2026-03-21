@@ -7,10 +7,17 @@ public class CommandDefinition
 {
     public string Id { get; set; } = "";
     public string Description { get; set; } = "";
+    /// <summary>SQF code to execute. Gets standard variables: _units, _target, _stance, _speed, _formation, _pos.</summary>
     public string Sqf { get; set; } = "";
     /// <summary>
+    /// Optional SQF that returns a prompt string for TTS voice response.
+    /// If set, result is sent to DialogueManager. Gets same standard variables.
+    /// Use for sitreps, reports — anything where a unit should speak the result.
+    /// </summary>
+    public string PromptSqf { get; set; } = "";
+    /// <summary>
     /// Optional SQF expression that must return true for this command to be enabled.
-    /// Evaluated once on connect. E.g. "isClass (configFile >> 'CfgPatches' >> 'ace_medical')"
+    /// Evaluated once on connect.
     /// </summary>
     public string EnableIf { get; set; } = "";
     public bool Enabled { get; set; } = true;

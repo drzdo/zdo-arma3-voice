@@ -1,4 +1,6 @@
 id: getin
-description: "Get in the vehicle at the look target position. Triggers: 'get in', 'mount up', 'садись', 'в машину', 'загружайтесь'."
+description: "Get in the vehicle the player is looking at. Triggers: 'get in', 'mount up', 'садись', 'в машину', 'загружайтесь'."
 sqf: |
-  [_units, _pos] call zdoArmaMic_fnc_getIn;
+  private _veh = [_pos] call zdoArmaMic_fnc_findVehicleAt;
+  if (isNull _veh) exitWith { systemChat "No vehicle found" };
+  { private _u = _x call BIS_fnc_objectFromNetId; _u assignAsCargo _veh; [_u] orderGetIn true } forEach _units;

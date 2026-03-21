@@ -1,3 +1,6 @@
 id: mark
-description: "Create a map marker at the look target position. LLM must set 'text' to the marker label. Triggers: 'mark this position', 'mark as Bravo', 'отметь на карте', 'поставь маркер Альфа'. If no label specified, set text to 'Mark'."
-sqf: ""
+description: "Create a map marker at the look target position. LLM must set 'text' to the marker label. Triggers: 'mark this position', 'mark as Bravo', 'отметь на карте', 'поставь маркер'. If no label, set text to 'Mark'."
+sqf: |
+  private _label = if (_text != "") then { _text } else { "Mark" };
+  [_pos, _label] call zdoArmaMic_fnc_createMarker;
+  systemChat format ["Marker: %1", _label];

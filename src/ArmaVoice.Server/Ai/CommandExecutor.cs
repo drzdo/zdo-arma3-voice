@@ -19,8 +19,6 @@ public class CommandExecutor
     private readonly float _ackChance;
     private readonly Random _rng = new();
     private List<string> _lastUnits = [];
-    /// <summary>Player-assigned names → netId. E.g. "alpha" → "0:15" (a vehicle).</summary>
-    private readonly Dictionary<string, string> _namedObjects = new(StringComparer.OrdinalIgnoreCase);
 
     public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState,
         CommandRegistry commandRegistry, DialogueManager? dialogueManager, ILlmClient llm,
@@ -40,7 +38,7 @@ public class CommandExecutor
     {
         var actionId = intent.Action.ToLowerInvariant();
 
-        // Dialogue — handled by DialogueManager
+        // Dialogue is the only true special case — needs full LLM conversation
         if (actionId == "dialogue")
         {
             if (_dialogueManager == null) { LogCmd("Dialogue", "disabled"); return; }
@@ -51,102 +49,14 @@ public class CommandExecutor
             return;
         }
 
-        // Mark — create a map marker at look target
-        if (actionId == "mark")
-        {
-            var label = (intent.Text ?? "Mark").Replace("'", "");
-            var markPos = FmtPos(lookTarget);
-            _rpc.Fire($"[{markPos}, '{label}'] call zdoArmaMic_fnc_createMarker");
-            LogCmd("Mark", $"\"{label}\" at {markPos}");
-            return;
-        }
-
-        // Sitrep hostiles — fetch data, let LLM compose a natural report, play via TTS
-        if (actionId == "sitrep_hostiles")
-        {
-            var sitrepUnits = await ResolveUnitsAsync(intent.Units);
-            if (sitrepUnits.Count == 0) { LogCmd("SitrepHostiles", "no units"); return; }
-            if (_dialogueManager == null) { LogCmd("SitrepHostiles", "dialogue disabled"); return; }
-
-            var reporterNetId = sitrepUnits[0];
-            var reporter = _unitRegistry.GetUnit(reporterNetId);
-            var reporterName = reporter?.Name ?? "Soldier";
-
-            try
-            {
-                var sitrepArr = string.Join(",", sitrepUnits.Select(id => $"'{id}'"));
-                var hostilesJson = await _rpc.CallAsync($"[[{sitrepArr}]] call zdoArmaMic_fnc_reportHostiles");
-
-                // Send hostiles data to dialogue manager as a special report prompt
-                var prompt = $"[SITREP] You are {reporterName}. Report known hostile contacts to {_gameState.PlayerRank} {_gameState.PlayerName}. "
-                    + $"Data (format: [type, side, distance_m, absolute_bearing, relative_bearing_from_you]): {hostilesJson}. "
-                    + "If the list is empty, say you don't see any hostiles. Be concise — 1-3 sentences. Use both relative direction AND bearing/azimuth. Example: 'Rifleman, 200 meters, bearing 150, to our right'.";
-
-                _dialogueManager.Enqueue(reporterNetId, prompt);
-                LogCmd("SitrepHostiles", $"queued report from {reporterName}");
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Cmd", $"Sitrep hostiles failed: {ex.Message}");
-            }
-            return;
-        }
-
-        // Sitrep position — unit reports where they are relative to player
-        if (actionId == "sitrep_position")
-        {
-            var posUnits = await ResolveUnitsAsync(intent.Units);
-            if (posUnits.Count == 0) { LogCmd("SitrepPos", "no units"); return; }
-            if (_dialogueManager == null) { LogCmd("SitrepPos", "dialogue disabled"); return; }
-
-            var reporterNetId = posUnits[0];
-            try
-            {
-                var posArr = string.Join(",", posUnits.Select(id => $"'{id}'"));
-                var posDataJson = await _rpc.CallAsync($"[[{posArr}]] call zdoArmaMic_fnc_getUnitPosition");
-                var prompt = $"[POSITION REPORT] Report your position to the player. Player is {_gameState.PlayerRank} {_gameState.PlayerName}. "
-                    + $"Data (format: [unitName, distance_m, bearing_degrees_from_player]): {posDataJson}. "
-                    + "Use cardinal direction (south-west, north, etc) AND bearing (azimuth). Example: '150 meters south-west, bearing 220'. Be brief, 1 sentence.";
-                _dialogueManager.Enqueue(reporterNetId, prompt);
-                LogCmd("SitrepPos", $"queued from {reporterNetId}");
-            }
-            catch (Exception ex) { Log.Error("Cmd", $"Sitrep position failed: {ex.Message}"); }
-            return;
-        }
-
-        // Name — assign a label to the object at look target
-        if (actionId == "name")
-        {
-            var label = intent.Text ?? "";
-            if (string.IsNullOrWhiteSpace(label)) { LogCmd("Name", "no name specified"); return; }
-            try
-            {
-                var namePos = FmtPos(lookTarget);
-                var netId = await _rpc.CallAsync($"[{namePos}] call zdoArmaMic_fnc_getObjectAt");
-                netId = netId.Trim('"');
-                if (string.IsNullOrEmpty(netId)) { LogCmd("Name", "no object at look target"); return; }
-                _namedObjects[label] = netId;
-                LogCmd("Name", $"\"{label}\" → {netId}");
-                _rpc.Fire($"systemChat format ['Named object: %1 → %2', '{label.Replace("'", "")}', '{netId}']");
-            }
-            catch (Exception ex) { Log.Error("Cmd", $"Name failed: {ex.Message}"); }
-            return;
-        }
-
-        // Look up command definition
+        // Look up command
         if (!_commandRegistry.Commands.TryGetValue(actionId, out var cmd))
         {
-            LogCmd(actionId, "unknown command (not found in commands/)");
+            LogCmd(actionId, "unknown command");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(cmd.Sqf))
-        {
-            LogCmd(actionId, "command has no SQF");
-            return;
-        }
-
-        // Resolve units — "last" means reuse previous target
+        // Resolve standard params
         var netIds = await ResolveUnitsAsync(intent.Units);
         if (intent.Units is ["last"] && _lastUnits.Count > 0)
         {
@@ -157,39 +67,67 @@ public class CommandExecutor
         {
             _lastUnits = netIds;
         }
+
         var targetNetId = ResolveUnitRef(intent.Target) ?? "";
         var position = await ResolveLocationAsync(intent.Location, lookTarget, netIds);
         var stance = intent.Stance ?? "";
         var speed = intent.Speed ?? "";
         var formation = intent.Formation ?? "";
+        var text = (intent.Text ?? "").Replace("'", "");
 
-        // Build SQF: set local vars, then execute command's SQF
         var unitsArr = string.Join(",", netIds.Select(id => $"'{id}'"));
         var posStr = FmtPos(position);
 
-        var sqf = $"""
+        // Standard variable block — shared by sqf and prompt_sqf
+        var varsBlock = $"""
             private _units = [[{unitsArr}]] call zdoArmaMic_fnc_filterAlive;
             private _target = '{targetNetId}';
             private _stance = '{stance}';
             private _speed = '{speed}';
             private _formation = '{formation}';
             private _pos = {posStr};
-            {cmd.Sqf.Trim()}
+            private _text = '{text}';
             """;
 
-        _rpc.Fire(sqf);
-        LogCmd(actionId, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr} stance={stance} speed={speed}");
+        // Execute SQF action (if any)
+        if (!string.IsNullOrWhiteSpace(cmd.Sqf))
+        {
+            _rpc.Fire(varsBlock + cmd.Sqf.Trim());
+        }
+
+        // Generate voice prompt (if any) → send to DialogueManager for TTS
+        if (!string.IsNullOrWhiteSpace(cmd.PromptSqf) && _dialogueManager != null && netIds.Count > 0)
+        {
+            try
+            {
+                var promptResult = await _rpc.CallAsync(varsBlock + cmd.PromptSqf.Trim());
+                promptResult = promptResult.Trim('"');
+
+                if (!string.IsNullOrEmpty(promptResult))
+                {
+                    var speakerNetId = netIds[0];
+                    _dialogueManager.Enqueue(speakerNetId, promptResult);
+                    LogCmd(actionId, $"voice prompt queued from {speakerNetId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Cmd", $"Prompt SQF failed for {actionId}: {ex.Message}");
+            }
+        }
+
+        LogCmd(actionId, $"units=[{string.Join(",", netIds)}] target={targetNetId} pos={posStr}");
 
         // Voice acknowledgment
-        if (_ackChance > 0 && _ackDialogue != null && netIds.Count > 0 && _rng.NextSingle() < _ackChance)
+        if (_ackChance > 0 && _dialogueManager != null && netIds.Count > 0 && _rng.NextSingle() < _ackChance
+            && string.IsNullOrWhiteSpace(cmd.PromptSqf))
         {
-            // Pick one random unit to ack
             var ackNetId = netIds[_rng.Next(netIds.Count)];
             var ackUnit = _unitRegistry.GetUnit(ackNetId);
             if (ackUnit != null && !string.IsNullOrEmpty(ackUnit.Name))
             {
-                _ackDialogue.Enqueue(ackNetId,
-                    $"[ACK] The player ({_gameState.PlayerRank} {_gameState.PlayerName}) just gave you a '{actionId}' command. Respond with a very short military acknowledgment (1 sentence max). Address the player by rank. Examples: 'Так точно, сержант!', 'Есть, товарищ сержант!', 'Принял, {_gameState.PlayerRank}!', 'Roger that, sergeant!'");
+                _dialogueManager.Enqueue(ackNetId,
+                    $"[ACK] The player ({_gameState.PlayerRank} {_gameState.PlayerName}) gave you a '{actionId}' command. Very short military ack, 1 sentence.");
                 Log.Info("Cmd", $"Ack from {ackUnit.Name}");
             }
         }
@@ -374,19 +312,19 @@ public class CommandExecutor
 
     private async Task<float[]?> ResolveNamedObjectPosAsync(string name)
     {
-        if (!_namedObjects.TryGetValue(name, out var netId))
-        {
-            Log.Warn("Cmd", $"Named object '{name}' not found in memory");
-            return null;
-        }
-
         try
         {
-            var result = await _rpc.CallAsync($"getPosASL ('{netId}' call BIS_fnc_objectFromNetId)");
+            var escaped = name.Replace("'", "");
+            var result = await _rpc.CallAsync($"['{escaped}'] call zdoArmaMic_fnc_getNamedPos");
             using var doc = System.Text.Json.JsonDocument.Parse(result);
             var arr = doc.RootElement;
             if (arr.ValueKind == System.Text.Json.JsonValueKind.Array && arr.GetArrayLength() >= 2)
-                return [arr[0].GetSingle(), arr[1].GetSingle(), arr.GetArrayLength() >= 3 ? arr[2].GetSingle() : 0f];
+            {
+                var pos = new float[] { arr[0].GetSingle(), arr[1].GetSingle(), arr.GetArrayLength() >= 3 ? arr[2].GetSingle() : 0f };
+                Log.Info("Cmd", $"Named '{name}' → {FmtPos(pos)}");
+                return pos;
+            }
+            Log.Warn("Cmd", $"Named object '{name}' not found");
         }
         catch (Exception ex) { Log.Error("Cmd", $"Named object pos failed: {ex.Message}"); }
         return null;
@@ -402,8 +340,10 @@ public class CommandExecutor
             "back" or "backward" or "behind" => playerDir + MathF.PI,
             "left" => playerDir - MathF.PI / 2f,
             "right" => playerDir + MathF.PI / 2f,
-            "north" => 0f, "south" => MathF.PI,
-            "east" => MathF.PI / 2f, "west" => 3f * MathF.PI / 2f,
+            "north" => 0f,
+            "south" => MathF.PI,
+            "east" => MathF.PI / 2f,
+            "west" => 3f * MathF.PI / 2f,
             _ => playerDir
         };
         return [pos[0] + distance * MathF.Sin(bearing), pos[1] + distance * MathF.Cos(bearing), pos[2]];

@@ -1,3 +1,7 @@
 id: sitrep_position
-description: "Report unit's position relative to the player. Triggers: 'where are you', 'report position', 'где ты', 'доложи позицию'. Unit responds with distance and direction from the player via TTS."
+description: "Report unit's position relative to the player via voice. Triggers: 'where are you', 'report position', 'где ты', 'доложи позицию'."
 sqf: ""
+prompt_sqf: |
+  private _data = [_units] call zdoArmaMic_fnc_getUnitPosition;
+  private _pi = call zdoArmaMic_fnc_getPlayerInfo;
+  format ["[POSITION] Report your position to %1 %2. Data [name,dist_m,bearing]: %3. Use cardinal direction AND bearing. 1 sentence.", _pi select 1, _pi select 0, _data]

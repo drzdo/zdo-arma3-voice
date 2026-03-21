@@ -11,22 +11,14 @@ arma3_mic_frameCount = 0;
 ["ArmaVoice", "arma3_mic_ptt", ["Push to Talk", "Hold to speak a voice command"],
 {
     // Key down
-    private _lookPos = if (visibleMap) then {
-        screenToWorld getMousePosition
-    } else {
-        screenToWorld [0.5, 0.5]
-    };
+    private _lookPos = call zdoArmaMic_fnc_getLookTarget;
     "arma3_mic" callExtension toJSON createHashMapFromArray [
         ["t", "ptt"], ["dir", "down"], ["pos", _lookPos]
     ];
 },
 {
     // Key up
-    private _lookPos = if (visibleMap) then {
-        screenToWorld getMousePosition
-    } else {
-        screenToWorld [0.5, 0.5]
-    };
+    private _lookPos = call zdoArmaMic_fnc_getLookTarget;
     "arma3_mic" callExtension toJSON createHashMapFromArray [
         ["t", "ptt"], ["dir", "up"], ["pos", _lookPos]
     ];

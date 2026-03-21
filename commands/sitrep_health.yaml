@@ -1,5 +1,7 @@
 id: sitrep_health
-description: "Report health status of units. Triggers: 'status report', 'how are you', 'report health', 'как дела', 'доложи о состоянии', 'ранен?'. Reports wounds, bleeding, pain if ACE3 medical is active, or basic damage otherwise. The SQF result is a text string — show it to the player via systemChat."
-sqf: |
-  private _report = [_units] call zdoArmaMic_fnc_getHealth;
-  systemChat _report;
+description: "Report health status via voice. Triggers: 'status report', 'how are you', 'report health', 'как дела', 'доложи о состоянии', 'ранен?'."
+sqf: ""
+prompt_sqf: |
+  private _data = [_units] call zdoArmaMic_fnc_getHealth;
+  private _pi = call zdoArmaMic_fnc_getPlayerInfo;
+  format ["[HEALTH] Report your health to %1 %2. Data: %3. Be brief, natural.", _pi select 1, _pi select 0, _data]
