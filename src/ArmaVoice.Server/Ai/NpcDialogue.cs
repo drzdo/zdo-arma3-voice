@@ -1,40 +1,22 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace ArmaVoice.Server.Ai;
 
 /// <summary>
-/// Uses Claude API for NPC dialogue responses. Maintains per-NPC conversation history
-/// and generates in-character responses based on NPC role, side, and nearby context.
+/// Generates NPC dialogue responses via ILlmClient.
+/// Maintains per-NPC conversation history.
 /// </summary>
 public class NpcDialogue
 {
-    private readonly HttpClient _http;
-    private readonly string _apiKey;
-    private readonly Dictionary<string, List<(string Role, string Text)>> _history = new();
+    private readonly ILlmClient _llm;
+    private readonly Dictionary<string, List<LlmMessage>> _history = new();
 
     private const int MaxHistoryPerNpc = 10;
     private const int HistoryContextCount = 5;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public NpcDialogue(ILlmClient llm)
     {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    public NpcDialogue(string claudeApiKey)
-    {
-        _apiKey = claudeApiKey;
-        _http = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        _llm = llm;
     }
 
-    /// <summary>
-    /// Generate an NPC dialogue response using Claude API.
-    /// Maintains conversation history per NPC (by netId).
-    /// </summary>
     public async Task<string> GenerateResponseAsync(
         string npcName,
         string npcRole,
@@ -66,93 +48,33 @@ public class NpcDialogue
             - Do not use quotation marks around your own speech.
             """;
 
-        // Build messages array with conversation history
-        var messages = new List<object>();
+        // Build messages with history
+        var messages = new List<LlmMessage>();
 
-        // Add recent history for this NPC
         if (_history.TryGetValue(npcNetId, out var history))
         {
-            var recentHistory = history.Count > HistoryContextCount
-                ? history[^HistoryContextCount..]
+            var recent = history.Count > HistoryContextCount * 2
+                ? history[^(HistoryContextCount * 2)..]
                 : history;
-
-            foreach (var (role, text) in recentHistory)
-            {
-                messages.Add(new { role, content = text });
-            }
+            messages.AddRange(recent);
         }
 
-        // Add the current player message
-        messages.Add(new { role = "user", content = playerText });
+        messages.Add(new LlmMessage("user", playerText));
 
-        var requestBody = new
-        {
-            model = "claude-sonnet-4-20250514",
-            max_tokens = 256,
-            system = systemPrompt,
-            messages
-        };
+        var response = await _llm.CompleteAsync(systemPrompt, messages, temperature: 0.7f, maxTokens: 256);
+        var npcResponse = response?.Trim() ?? $"*{npcName} does not respond*";
 
-        try
-        {
-            var json = JsonSerializer.Serialize(requestBody, JsonOptions);
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages")
-            {
-                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
-            };
-            request.Headers.Add("x-api-key", _apiKey);
-            request.Headers.Add("anthropic-version", "2023-06-01");
+        // Update history
+        if (!_history.ContainsKey(npcNetId))
+            _history[npcNetId] = [];
 
-            var response = await _http.SendAsync(request);
-            var responseBody = await response.Content.ReadAsStringAsync();
+        _history[npcNetId].Add(new LlmMessage("user", playerText));
+        _history[npcNetId].Add(new LlmMessage("assistant", npcResponse));
 
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"[NpcDialogue] Claude API error ({response.StatusCode}): {responseBody[..Math.Min(200, responseBody.Length)]}");
-                return $"*{npcName} does not respond*";
-            }
+        if (_history[npcNetId].Count > MaxHistoryPerNpc * 2)
+            _history[npcNetId] = _history[npcNetId][^(MaxHistoryPerNpc * 2)..];
 
-            // Parse Claude response: { content: [{ type: "text", text: "..." }] }
-            using var doc = JsonDocument.Parse(responseBody);
-            var root = doc.RootElement;
-
-            var contentArray = root.GetProperty("content");
-            if (contentArray.GetArrayLength() == 0)
-            {
-                Console.WriteLine("[NpcDialogue] Claude returned empty content.");
-                return $"*{npcName} does not respond*";
-            }
-
-            var npcResponse = contentArray[0].GetProperty("text").GetString() ?? "";
-            npcResponse = npcResponse.Trim();
-
-            // Update conversation history
-            if (!_history.ContainsKey(npcNetId))
-            {
-                _history[npcNetId] = [];
-            }
-
-            _history[npcNetId].Add(("user", playerText));
-            _history[npcNetId].Add(("assistant", npcResponse));
-
-            // Cap history at max entries
-            if (_history[npcNetId].Count > MaxHistoryPerNpc)
-            {
-                _history[npcNetId] = _history[npcNetId][^MaxHistoryPerNpc..];
-            }
-
-            Console.WriteLine($"[NpcDialogue] {npcName}: \"{npcResponse[..Math.Min(80, npcResponse.Length)]}\"");
-            return npcResponse;
-        }
-        catch (HttpRequestException ex)
-        {
-            Console.WriteLine($"[NpcDialogue] Claude API request failed: {ex.Message}");
-            return $"*{npcName} does not respond*";
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[NpcDialogue] Unexpected error: {ex.Message}");
-            return $"*{npcName} does not respond*";
-        }
+        Console.WriteLine($"[NpcDialogue] {npcName}: \"{npcResponse[..Math.Min(80, npcResponse.Length)]}\"");
+        return npcResponse;
     }
 }

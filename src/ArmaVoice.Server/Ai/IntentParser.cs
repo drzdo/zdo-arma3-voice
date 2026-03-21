@@ -74,8 +74,7 @@ public class UnitSummary
 
 public class IntentParser
 {
-    private readonly HttpClient _http;
-    private readonly string _apiKey;
+    private readonly ILlmClient _llm;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -83,10 +82,9 @@ public class IntentParser
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public IntentParser(string geminiApiKey)
+    public IntentParser(ILlmClient llm)
     {
-        _apiKey = geminiApiKey;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        _llm = llm;
     }
 
     public async Task<IntentParsed?> ParseAsync(string speechText, List<UnitSummary> knownUnits)
@@ -170,40 +168,13 @@ public class IntentParser
             Speech: "Петрович, що бачиш попереду?" -> {"action":"dialogue","target":"2:4","text":"що бачиш попереду?"}
             """;
 
-        var requestBody = new
-        {
-            system_instruction = new { parts = new[] { new { text = systemPrompt } } },
-            contents = new[] { new { parts = new[] { new { text = speechText } } } },
-            generationConfig = new { temperature = 0.1, maxOutputTokens = 300 }
-        };
-
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={_apiKey}";
-
         try
         {
-            var json = JsonSerializer.Serialize(requestBody, JsonOptions);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            var response = await _http.PostAsync(url, content);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"[IntentParser] Gemini error ({response.StatusCode}): {responseBody[..Math.Min(200, responseBody.Length)]}");
-                return null;
-            }
-
-            using var doc = JsonDocument.Parse(responseBody);
-            var candidates = doc.RootElement.GetProperty("candidates");
-            if (candidates.GetArrayLength() == 0) return null;
-
-            var textResponse = candidates[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString() ?? "";
+            var messages = new List<LlmMessage> { new("user", speechText) };
+            var textResponse = await _llm.CompleteAsync(systemPrompt, messages, temperature: 0.1f, maxTokens: 300);
+            if (string.IsNullOrEmpty(textResponse)) return null;
 
             // Strip markdown fences
-            textResponse = textResponse.Trim();
             if (textResponse.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
                 textResponse = textResponse[7..];
             else if (textResponse.StartsWith("```"))

@@ -24,10 +24,21 @@ tts:
       indfor: YOUR_INDFOR_VOICE_ID
       # per unit name:
       # Miller: YOUR_MILLER_VOICE_ID
-      # Ivanov: YOUR_IVANOV_VOICE_ID
 
-gemini:
-  api_key: YOUR_GEMINI_API_KEY
-
-claude:
-  api_key: YOUR_CLAUDE_API_KEY
+llm:
+  intent:
+    system: gemini  # gemini | claude
+    gemini:
+      api_key: YOUR_GEMINI_API_KEY
+      model: gemini-2.0-flash
+    claude:
+      api_key: YOUR_CLAUDE_API_KEY
+      model: claude-sonnet-4-20250514
+  dialogue:
+    system: claude  # gemini | claude
+    gemini:
+      api_key: YOUR_GEMINI_API_KEY
+      model: gemini-2.0-flash
+    claude:
+      api_key: YOUR_CLAUDE_API_KEY
+      model: claude-sonnet-4-20250514

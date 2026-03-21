@@ -8,8 +8,7 @@ public class AppConfig
     public ServerConfig Server { get; set; } = new();
     public SttConfig Stt { get; set; } = new();
     public TtsConfig Tts { get; set; } = new();
-    public GeminiConfig Gemini { get; set; } = new();
-    public ClaudeConfig Claude { get; set; } = new();
+    public LlmConfig Llm { get; set; } = new();
 
     public static AppConfig Load(string path)
     {
@@ -67,13 +66,32 @@ public class AppConfig
                 break;
         }
 
-        // AI validation
-        RequireField(errors, Gemini.ApiKey, "gemini.api_key");
+        // LLM validation
+        ValidateLlmInstance(errors, Llm.Intent, "llm.intent");
+        ValidateLlmInstance(errors, Llm.Dialogue, "llm.dialogue");
 
         if (errors.Count > 0)
         {
             var msg = "Config validation failed:\n  - " + string.Join("\n  - ", errors);
             throw new InvalidOperationException(msg);
+        }
+    }
+
+    private static void ValidateLlmInstance(List<string> errors, LlmInstanceConfig cfg, string prefix)
+    {
+        switch (cfg.System.ToLowerInvariant())
+        {
+            case "gemini":
+                RequireField(errors, cfg.Gemini.ApiKey, $"{prefix}.gemini.api_key");
+                RequireField(errors, cfg.Gemini.Model, $"{prefix}.gemini.model");
+                break;
+            case "claude":
+                RequireField(errors, cfg.Claude.ApiKey, $"{prefix}.claude.api_key");
+                RequireField(errors, cfg.Claude.Model, $"{prefix}.claude.model");
+                break;
+            default:
+                errors.Add($"Unknown {prefix}.system: \"{cfg.System}\". Must be \"gemini\" or \"claude\".");
+                break;
         }
     }
 
@@ -135,14 +153,31 @@ public class ElevenLabsConfig
     public Dictionary<string, string> Voices { get; set; } = new();
 }
 
-// ── AI ───────────────────────────────────────────────────
+// ── LLM ──────────────────────────────────────────────────
 
-public class GeminiConfig
+public class LlmConfig
 {
-    public string ApiKey { get; set; } = "";
+    /// <summary>LLM for intent parsing (voice commands).</summary>
+    public LlmInstanceConfig Intent { get; set; } = new();
+    /// <summary>LLM for NPC dialogue.</summary>
+    public LlmInstanceConfig Dialogue { get; set; } = new();
 }
 
-public class ClaudeConfig
+public class LlmInstanceConfig
+{
+    public string System { get; set; } = "";
+    public GeminiLlmConfig Gemini { get; set; } = new();
+    public ClaudeLlmConfig Claude { get; set; } = new();
+}
+
+public class GeminiLlmConfig
 {
     public string ApiKey { get; set; } = "";
+    public string Model { get; set; } = "gemini-2.0-flash";
+}
+
+public class ClaudeLlmConfig
+{
+    public string ApiKey { get; set; } = "";
+    public string Model { get; set; } = "claude-sonnet-4-20250514";
 }

@@ -12,9 +12,9 @@ public class CommandExecutor
     private readonly RpcClient _rpc;
     private readonly UnitRegistry _unitRegistry;
     private readonly GameState _gameState;
-    private readonly DialogueManager? _dialogueManager;
+    private readonly DialogueManager _dialogueManager;
 
-    public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState, DialogueManager? dialogueManager)
+    public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState, DialogueManager dialogueManager)
     {
         _rpc = rpc;
         _unitRegistry = unitRegistry;
@@ -64,7 +64,6 @@ public class CommandExecutor
             case "dialogue":
                 var npcNetId = ResolveUnitRef(intent.Target);
                 if (npcNetId == null) { Log("Dialogue", $"target \"{intent.Target}\" not found."); break; }
-                if (_dialogueManager == null) { Log("Dialogue", "not available."); break; }
                 _dialogueManager.Enqueue(npcNetId, intent.Text ?? "");
                 Log("Dialogue", $"queued → {npcNetId}");
                 break;

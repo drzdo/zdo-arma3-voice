@@ -34,8 +34,8 @@ public class Program
         Console.WriteLine($"[Server] Port: {config.Server.Port}");
         Console.WriteLine($"[Server] STT: {config.Stt.System}");
         Console.WriteLine($"[Server] TTS: {config.Tts.System}");
-        Console.WriteLine($"[Server] Gemini API key: {(string.IsNullOrEmpty(config.Gemini.ApiKey) ? "NOT SET" : "***")}");
-        Console.WriteLine($"[Server] Claude API key: {(string.IsNullOrEmpty(config.Claude.ApiKey) ? "NOT SET" : "***")}");
+        Console.WriteLine($"[Server] LLM intent: {config.Llm.Intent.System}");
+        Console.WriteLine($"[Server] LLM dialogue: {config.Llm.Dialogue.System}");
 
         // Core infrastructure
         var bridge = new TcpBridge(config.Server.Port);
@@ -78,43 +78,29 @@ public class Program
         var spatialMixer = new SpatialMixer();
         var radioEffect = new RadioEffect();
 
-        // AI
-        IntentParser? intentParser = null;
-        if (!string.IsNullOrEmpty(config.Gemini.ApiKey))
+        // LLM clients
+        static ILlmClient CreateLlmClient(LlmInstanceConfig cfg) => cfg.System.ToLowerInvariant() switch
         {
-            intentParser = new IntentParser(config.Gemini.ApiKey);
-            Console.WriteLine("[Server] IntentParser ready.");
-        }
-        else
-        {
-            Console.WriteLine("[Server] IntentParser unavailable: no Gemini API key.");
-        }
+            "gemini" => new GeminiLlmClient(cfg.Gemini.ApiKey, cfg.Gemini.Model),
+            "claude" => new ClaudeLlmClient(cfg.Claude.ApiKey, cfg.Claude.Model),
+            _ => throw new InvalidOperationException($"Unknown LLM system: {cfg.System}")
+        };
 
-        NpcDialogue? npcDialogue = null;
-        if (!string.IsNullOrEmpty(config.Claude.ApiKey))
-        {
-            npcDialogue = new NpcDialogue(config.Claude.ApiKey);
-            Console.WriteLine("[Server] NpcDialogue ready.");
-        }
-        else
-        {
-            Console.WriteLine("[Server] NpcDialogue unavailable: no Claude API key.");
-        }
+        var intentLlm = CreateLlmClient(config.Llm.Intent);
+        var dialogueLlm = CreateLlmClient(config.Llm.Dialogue);
 
-        // Dialogue manager (needs NPC dialogue + TTS)
-        DialogueManager? dialogueManager = null;
-        if (npcDialogue != null)
-        {
-            dialogueManager = new DialogueManager(
-                npcDialogue, tts, audioPlayer, spatialMixer, radioEffect, gameState, unitRegistry);
-        }
+        var intentParser = new IntentParser(intentLlm);
+        Console.WriteLine("[Server] IntentParser ready.");
+
+        var npcDialogue = new NpcDialogue(dialogueLlm);
+        Console.WriteLine("[Server] NpcDialogue ready.");
+
+        // Dialogue manager
+        var dialogueManager = new DialogueManager(
+            npcDialogue, tts, audioPlayer, spatialMixer, radioEffect, gameState, unitRegistry);
 
         // Command executor
-        CommandExecutor? commandExecutor = null;
-        if (intentParser != null)
-        {
-            commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, dialogueManager);
-        }
+        var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, dialogueManager);
 
         // Wire up TcpBridge events
         bridge.OnStateReceived = payload =>
@@ -145,9 +131,9 @@ public class Program
             {
                 lastLookTarget = lookPos;
 
-                if (speechRecognizer == null || intentParser == null)
+                if (speechRecognizer == null)
                 {
-                    Console.WriteLine("[PTT] Speech or intent parser not available.");
+                    Console.WriteLine("[PTT] Speech recognizer not available.");
                     return;
                 }
 
@@ -185,10 +171,7 @@ public class Program
                             return;
                         }
 
-                        if (commandExecutor != null)
-                        {
-                            await commandExecutor.ExecuteAsync(intent, capturedLookTarget);
-                        }
+                        await commandExecutor.ExecuteAsync(intent, capturedLookTarget);
                     }
                     catch (Exception ex)
                     {
@@ -222,7 +205,7 @@ public class Program
         };
 
         // Start dialogue manager in background
-        Task? dialogueTask = dialogueManager?.RunAsync(cts.Token);
+        var dialogueTask = dialogueManager.RunAsync(cts.Token);
 
         // Periodic squad re-sync (every 30s)
         _ = Task.Run(async () =>
@@ -250,11 +233,8 @@ public class Program
             audioPlayer.Dispose();
         }
 
-        if (dialogueTask != null)
-        {
-            try { await dialogueTask; }
-            catch (OperationCanceledException) { }
-        }
+        try { await dialogueTask; }
+        catch (OperationCanceledException) { }
 
         Console.WriteLine("[Server] Shut down.");
     }
