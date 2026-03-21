@@ -84,7 +84,7 @@ public class CommandExecutor
         var posStr = FmtPos(position);
 
         var sqf = $"""
-            private _units = [{unitsArr}];
+            private _units = [[{unitsArr}]] call zdoArmaMic_fnc_filterAlive;
             private _target = '{targetNetId}';
             private _stance = '{stance}';
             private _speed = '{speed}';

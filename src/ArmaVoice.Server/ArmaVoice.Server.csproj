@@ -11,7 +11,25 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
+
+  <Target Name="GenerateVersionInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <GitVersion>unknown</GitVersion>
+      <GitHash>unknown</GitHash>
+    </PropertyGroup>
+    <Exec Command="git describe --tags --always --dirty" ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitVersion" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitHash" />
+    </Exec>
+    <WriteLinesToFile File="$(IntermediateOutputPath)Version.g.cs" Overwrite="true" Lines="namespace ArmaVoice.Server%3B static partial class BuildInfo { public const string Version = &quot;$(GitVersion)&quot;%3B public const string CommitHash = &quot;$(GitHash)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)Version.g.cs" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />

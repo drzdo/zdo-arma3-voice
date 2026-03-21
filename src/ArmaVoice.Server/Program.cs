@@ -10,7 +10,7 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        Console.WriteLine("=== ArmaVoice Server ===");
+        Console.WriteLine($"=== ArmaVoice Server {BuildInfo.Version} ({BuildInfo.CommitHash}) ===");
 
         // --config is required
         string? configPath = null;
@@ -231,6 +231,10 @@ public class Program
                     catch { }
                 }
                 await unitRegistry.SyncSquadAsync();
+                await commandRegistry.CheckEnableConditionsAsync(rpcClient);
+
+                // Rebuild prompt with only enabled commands
+                intentParser.UpdateCommandPrompt(commandRegistry.BuildPromptSection());
             });
         };
 

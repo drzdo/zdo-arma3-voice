@@ -87,7 +87,7 @@ internal partial class IntentJsonContext : JsonSerializerContext;
 public class IntentParser
 {
     private readonly ILlmClient _llm;
-    private readonly string _commandPromptSection;
+    private string _commandPromptSection;
     private readonly string _sessionContext;
 
     public IntentParser(ILlmClient llm, string commandPromptSection, string sessionContext = "")
@@ -95,6 +95,12 @@ public class IntentParser
         _llm = llm;
         _commandPromptSection = commandPromptSection;
         _sessionContext = sessionContext;
+    }
+
+    public void UpdateCommandPrompt(string commandPromptSection)
+    {
+        _commandPromptSection = commandPromptSection;
+        Log.Info("IntentParser", "Command prompt updated.");
     }
 
     public async Task<IntentParsed?> ParseAsync(string speechText, List<UnitSummary> knownUnits)

@@ -8,6 +8,12 @@ public class CommandDefinition
     public string Id { get; set; } = "";
     public string Description { get; set; } = "";
     public string Sqf { get; set; } = "";
+    /// <summary>
+    /// Optional SQF expression that must return true for this command to be enabled.
+    /// Evaluated once on connect. E.g. "isClass (configFile >> 'CfgPatches' >> 'ace_medical')"
+    /// </summary>
+    public string EnableIf { get; set; } = "";
+    public bool Enabled { get; set; } = true;
 }
 
 /// <summary>
@@ -101,12 +107,40 @@ public class CommandRegistry
     }
 
     /// <summary>
-    /// Build the command list section for the LLM prompt.
+    /// Check enableIf conditions for all commands via SQF RPCs.
+    /// Call after functions are registered and SQF is ready.
+    /// </summary>
+    public async Task CheckEnableConditionsAsync(RpcClient rpc)
+    {
+        foreach (var cmd in _commands.Values)
+        {
+            if (string.IsNullOrWhiteSpace(cmd.EnableIf))
+            {
+                cmd.Enabled = true;
+                continue;
+            }
+
+            try
+            {
+                var result = await rpc.CallAsync(cmd.EnableIf);
+                cmd.Enabled = result == "true";
+                Log.Info("CommandRegistry", $"Command '{cmd.Id}' enableIf='{cmd.EnableIf}' → {(cmd.Enabled ? "enabled" : "disabled")}");
+            }
+            catch
+            {
+                cmd.Enabled = false;
+                Log.Warn("CommandRegistry", $"Command '{cmd.Id}' enableIf check failed, disabling.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Build the command list section for the LLM prompt. Only includes enabled commands.
     /// </summary>
     public string BuildPromptSection()
     {
         var lines = new List<string>();
-        foreach (var cmd in _commands.Values)
+        foreach (var cmd in _commands.Values.Where(c => c.Enabled))
         {
             lines.Add($"- \"{cmd.Id}\": {cmd.Description}");
         }
