@@ -37,11 +37,11 @@ public class Program
         Console.WriteLine($"[Server] LLM intent: {config.Llm.Intent.System}");
         Console.WriteLine($"[Server] LLM dialogue: {config.Llm.Dialogue.System}");
 
-        // Load commands and functions relative to config file location
+        // Load commands and functions relative to exe location
         var commandRegistry = new CommandRegistry();
-        var baseDir = Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? ".";
-        commandRegistry.LoadCommands(Path.Combine(baseDir, "commands"));
-        commandRegistry.LoadFunctions(Path.Combine(baseDir, "functions"));
+        var exeDir = AppContext.BaseDirectory;
+        commandRegistry.LoadCommands(Path.Combine(exeDir, "commands"));
+        commandRegistry.LoadFunctions(Path.Combine(exeDir, "functions"));
 
         // Core infrastructure
         var bridge = new TcpBridge(config.Server.Host, config.Server.Port);

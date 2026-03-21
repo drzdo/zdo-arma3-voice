@@ -1,3 +1,3 @@
 params ["_netIds", "_pos"];
-{ (objectFromNetId _x) doMove _pos } forEach _netIds;
+{ (_x call BIS_fnc_objectFromNetId) doMove _pos } forEach _netIds;
 "ok"

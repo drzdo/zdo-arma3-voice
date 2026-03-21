@@ -1,3 +1,3 @@
 params ["_netIds"];
-{ (objectFromNetId _x) setUnitPos "DOWN" } forEach _netIds;
+{ (_x call BIS_fnc_objectFromNetId) setUnitPos "DOWN" } forEach _netIds;
 "ok"

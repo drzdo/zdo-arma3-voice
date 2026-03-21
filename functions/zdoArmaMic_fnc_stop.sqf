@@ -1,3 +1,3 @@
 params ["_netIds"];
-{ doStop (objectFromNetId _x) } forEach _netIds;
+{ doStop (_x call BIS_fnc_objectFromNetId) } forEach _netIds;
 "ok"

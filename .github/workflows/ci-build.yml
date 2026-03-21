@@ -33,12 +33,14 @@ jobs:
       - name: Publish Server (single exe)
         run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
 
-      - name: Bundle server data
+      - name: Bundle server distribution
         shell: pwsh
         run: |
-          Copy-Item -Recurse commands publish/server/commands
-          Copy-Item -Recurse functions publish/server/functions
-          Copy-Item config.yaml.example publish/server/config.yaml.example
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item publish/server/ArmaVoice.Server.exe dist/
+          Copy-Item -Recurse commands dist/commands
+          Copy-Item -Recurse functions dist/functions
+          Copy-Item config.yaml.example dist/config.yaml.example
 
       - name: Download HEMTT
         shell: pwsh
@@ -69,4 +71,4 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: arma3-mic-server
-          path: publish/server/
+          path: dist/
