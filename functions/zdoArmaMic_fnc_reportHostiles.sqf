@@ -4,7 +4,9 @@ private _allTargets = [];
     private _u = _x call BIS_fnc_objectFromNetId;
     private _uPos = getPosASL _u;
     private _uDir = getDirVisual _u;
-    private _known = _u targets [true, 0, [], 0];
+    private _known = _u targets [true, 600, [], 0];
+
+    diag_log format ["ArmaVoice reportHostiles: unit=%1 targets=%2", name _u, count _known];
 
     {
         _x params ["_target", "_lastKnownPos"];
