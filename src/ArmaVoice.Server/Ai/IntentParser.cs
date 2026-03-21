@@ -147,17 +147,18 @@ public class IntentParser
             var textResponse = await _llm.CompleteAsync(systemPrompt, messages, temperature: 0.1f, maxTokens: 300);
             if (string.IsNullOrEmpty(textResponse)) return null;
 
-            // Strip markdown fences
-            if (textResponse.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-                textResponse = textResponse[7..];
-            else if (textResponse.StartsWith("```"))
-                textResponse = textResponse[3..];
-            if (textResponse.EndsWith("```"))
-                textResponse = textResponse[..^3];
-            textResponse = textResponse.Trim();
+            var json = StripMarkdownFences(textResponse);
+            var intent = TryParseIntent(json);
 
-            var intent = JsonSerializer.Deserialize(textResponse, IntentJsonContext.Default.IntentParsed);
-            Console.WriteLine($"[IntentParser] action={intent?.Action} units=[{string.Join(",", intent?.Units ?? [])}] location={intent?.Location?.Type} target={intent?.Target} stance={intent?.Stance} speed={intent?.Speed}");
+            if (intent == null)
+            {
+                Console.WriteLine($"[IntentParser] Bad JSON from LLM, retrying with fix prompt...");
+                intent = await RetryWithFixPromptAsync(json);
+            }
+
+            if (intent != null)
+                Console.WriteLine($"[IntentParser] action={intent.Action} units=[{string.Join(",", intent.Units)}] location={intent.Location?.Type} target={intent.Target} stance={intent.Stance} speed={intent.Speed}");
+
             return intent;
         }
         catch (Exception ex)
@@ -165,5 +166,66 @@ public class IntentParser
             Console.WriteLine($"[IntentParser] Error: {ex.Message}");
             return null;
         }
+    }
+
+    private async Task<IntentParsed?> RetryWithFixPromptAsync(string brokenJson)
+    {
+        var fixPrompt = """
+            The following JSON is malformed or doesn't match the expected schema. Fix it and return ONLY valid JSON.
+
+            Expected schema:
+            {"action":"...","units":["..."],"location":{"type":"...","distance":0,"direction":"...","azimuth":0},"target":"...","text":"...","formation":"...","stance":"...","speed":"..."}
+            All fields except "action" and "units" are optional — omit if not needed.
+
+            Broken JSON:
+            """ + brokenJson;
+
+        try
+        {
+            var messages = new List<LlmMessage> { new("user", fixPrompt) };
+            var fixedResponse = await _llm.CompleteAsync(
+                "You fix broken JSON. Return ONLY the fixed JSON, nothing else.", messages, temperature: 0f, maxTokens: 300);
+
+            if (string.IsNullOrEmpty(fixedResponse)) return null;
+
+            var json = StripMarkdownFences(fixedResponse);
+            var intent = TryParseIntent(json);
+
+            if (intent != null)
+                Console.WriteLine("[IntentParser] Retry succeeded.");
+            else
+                Console.WriteLine($"[IntentParser] Retry also failed: {json[..Math.Min(80, json.Length)]}");
+
+            return intent;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[IntentParser] Retry error: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static IntentParsed? TryParseIntent(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(json, IntentJsonContext.Default.IntentParsed);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string StripMarkdownFences(string text)
+    {
+        text = text.Trim();
+        if (text.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+            text = text[7..];
+        else if (text.StartsWith("```"))
+            text = text[3..];
+        if (text.EndsWith("```"))
+            text = text[..^3];
+        return text.Trim();
     }
 }
