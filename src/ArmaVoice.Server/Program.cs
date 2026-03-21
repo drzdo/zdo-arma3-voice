@@ -52,7 +52,9 @@ public class Program
                 "deepgram" => new DeepgramRecognizer(
                     config.Stt.Deepgram.ApiKey,
                     config.Stt.Deepgram.Model,
-                    config.Stt.Deepgram.Language),
+                    config.Stt.Deepgram.Language,
+                    config.Stt.Deepgram.Encoding,
+                    config.Stt.Deepgram.SampleRate),
                 _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath),
             };
             Console.WriteLine($"[Server] STT ({config.Stt.System}) ready.");
@@ -81,7 +83,7 @@ public class Program
         // LLM clients
         static ILlmClient CreateLlmClient(LlmInstanceConfig cfg) => cfg.System.ToLowerInvariant() switch
         {
-            "gemini" => new GeminiLlmClient(cfg.Gemini.ApiKey, cfg.Gemini.Model),
+            "gemini" => new GeminiLlmClient(cfg.Gemini.ApiKey, cfg.Gemini.Model, cfg.Gemini.ThinkingBudget),
             "claude" => new ClaudeLlmClient(cfg.Claude.ApiKey, cfg.Claude.Model),
             _ => throw new InvalidOperationException($"Unknown LLM system: {cfg.System}")
         };

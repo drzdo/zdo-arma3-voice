@@ -8,7 +8,9 @@ stt:
   deepgram:
     api_key: YOUR_DEEPGRAM_API_KEY
     model: nova-2
-    language: en
+    language: ru
+    encoding: linear16
+    sample_rate: 16000
 
 tts:
   system: piper  # piper | elevenlabs
@@ -30,7 +32,8 @@ llm:
     system: gemini  # gemini | claude
     gemini:
       api_key: YOUR_GEMINI_API_KEY
-      model: gemini-2.0-flash
+      model: gemini-2.0-flash-lite
+      thinking_budget: 0
     claude:
       api_key: YOUR_CLAUDE_API_KEY
       model: claude-sonnet-4-20250514
@@ -38,7 +41,8 @@ llm:
     system: claude  # gemini | claude
     gemini:
       api_key: YOUR_GEMINI_API_KEY
-      model: gemini-2.0-flash
+      model: gemini-2.0-flash-lite
+      thinking_budget: 0
     claude:
       api_key: YOUR_CLAUDE_API_KEY
       model: claude-sonnet-4-20250514

@@ -1,0 +1,65 @@
+name: CI Build
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Publish Extension (NativeAOT)
+        run: dotnet publish src/ArmaVoice.Extension -c Release -r win-x64 -o publish/extension
+
+      - name: Publish Server (single exe)
+        run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
+
+      - name: Download HEMTT
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo BrettMayson/HEMTT --pattern "windows-x64.zip"
+          Expand-Archive windows-x64.zip -DestinationPath hemtt_bin
+          Copy-Item hemtt_bin/hemtt.exe hemtt.exe
+
+      - name: Pack PBO
+        run: ./hemtt.exe build
+
+      - name: Package mod
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package/@arma3_mic/addons
+          Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
+          Copy-Item .hemttout/build/addons/*.pbo package/@arma3_mic/addons/
+
+      - name: Upload Mod
+        uses: actions/upload-artifact@v4
+        with:
+          name: '@arma3_mic'
+          path: package/@arma3_mic/
+
+      - name: Upload Server
+        uses: actions/upload-artifact@v4
+        with:
+          name: arma3-mic-server
+          path: publish/server/ArmaVoice.Server.exe

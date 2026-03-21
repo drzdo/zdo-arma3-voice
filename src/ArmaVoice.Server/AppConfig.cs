@@ -43,6 +43,9 @@ public class AppConfig
                 RequireField(errors, Stt.Deepgram.ApiKey, "stt.deepgram.api_key");
                 RequireField(errors, Stt.Deepgram.Model, "stt.deepgram.model");
                 RequireField(errors, Stt.Deepgram.Language, "stt.deepgram.language");
+                RequireField(errors, Stt.Deepgram.Encoding, "stt.deepgram.encoding");
+                if (Stt.Deepgram.SampleRate <= 0)
+                    errors.Add("\"stt.deepgram.sample_rate\" is required and must be > 0.");
                 break;
             default:
                 errors.Add($"Unknown stt.system: \"{Stt.System}\". Must be \"whisper\" or \"deepgram\".");
@@ -126,6 +129,8 @@ public class DeepgramConfig
     public string ApiKey { get; set; } = "";
     public string Model { get; set; } = "";
     public string Language { get; set; } = "";
+    public string Encoding { get; set; } = "";
+    public int SampleRate { get; set; }
 }
 
 // ── TTS ──────────────────────────────────────────────────
@@ -173,7 +178,8 @@ public class LlmInstanceConfig
 public class GeminiLlmConfig
 {
     public string ApiKey { get; set; } = "";
-    public string Model { get; set; } = "gemini-2.0-flash";
+    public string Model { get; set; } = "gemini-2.0-flash-lite";
+    public int ThinkingBudget { get; set; } = 0;
 }
 
 public class ClaudeLlmConfig

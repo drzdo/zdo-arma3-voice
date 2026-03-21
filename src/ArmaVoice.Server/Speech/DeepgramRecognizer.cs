@@ -13,15 +13,19 @@ public class DeepgramRecognizer : ISpeechRecognizer
     private readonly HttpClient _http;
     private readonly string _model;
     private readonly string _language;
+    private readonly string _encoding;
+    private readonly int _sampleRate;
     private WaveInEvent? _waveIn;
     private MemoryStream? _audioBuffer;
     private bool _recording;
     private readonly object _lock = new();
 
-    public DeepgramRecognizer(string apiKey, string model = "nova-2", string language = "en")
+    public DeepgramRecognizer(string apiKey, string model, string language, string encoding, int sampleRate)
     {
         _model = model;
         _language = language;
+        _encoding = encoding;
+        _sampleRate = sampleRate;
 
         _http = new HttpClient
         {
@@ -31,7 +35,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
 
         _waveIn = new WaveInEvent
         {
-            WaveFormat = new WaveFormat(16000, 16, 1),
+            WaveFormat = new WaveFormat(sampleRate, 16, 1),
             BufferMilliseconds = 50
         };
         _waveIn.DataAvailable += OnDataAvailable;
@@ -83,12 +87,12 @@ public class DeepgramRecognizer : ISpeechRecognizer
             _audioBuffer.Seek(0, SeekOrigin.Begin);
         }
 
-        Console.WriteLine($"[DeepgramRecognizer] Sending {rawPcm.Length / 2} samples ({rawPcm.Length / 2 / 16000.0:F1}s) to Deepgram...");
+        Console.WriteLine($"[DeepgramRecognizer] Sending {rawPcm.Length / 2} samples ({rawPcm.Length / 2 / (float)_sampleRate:F1}s) to Deepgram...");
 
         // Build WAV in memory (Deepgram accepts raw WAV)
-        var wavBytes = BuildWav(rawPcm, 16000, 16, 1);
+        var wavBytes = BuildWav(rawPcm, _sampleRate, 16, 1);
 
-        var url = $"https://api.deepgram.com/v1/listen?model={_model}&language={_language}&smart_format=true";
+        var url = $"https://api.deepgram.com/v1/listen?model={_model}&language={_language}&encoding={_encoding}&sample_rate={_sampleRate}&smart_format=true";
 
         try
         {

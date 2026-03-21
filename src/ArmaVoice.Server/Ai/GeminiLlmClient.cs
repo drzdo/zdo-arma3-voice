@@ -7,28 +7,33 @@ public class GeminiLlmClient : ILlmClient
     private readonly HttpClient _http;
     private readonly string _apiKey;
     private readonly string _model;
+    private readonly int _thinkingBudget;
 
-    public GeminiLlmClient(string apiKey, string model = "gemini-2.0-flash")
+    public GeminiLlmClient(string apiKey, string model = "gemini-2.0-flash-lite", int thinkingBudget = 0)
     {
         _apiKey = apiKey;
         _model = model;
+        _thinkingBudget = thinkingBudget;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
     }
 
     public async Task<string?> CompleteAsync(string systemPrompt, List<LlmMessage> messages, float temperature = 0.1f, int maxTokens = 300)
     {
-        // Build Gemini contents array from messages
         var contents = messages.Select(m => new
         {
             role = m.Role == "assistant" ? "model" : "user",
             parts = new[] { new { text = m.Content } }
         }).ToArray();
 
+        object generationConfig = _thinkingBudget > 0
+            ? new { temperature, maxOutputTokens = maxTokens, thinkingConfig = new { thinkingBudget = _thinkingBudget } }
+            : new { temperature, maxOutputTokens = maxTokens };
+
         var requestBody = new
         {
             system_instruction = new { parts = new[] { new { text = systemPrompt } } },
             contents,
-            generationConfig = new { temperature, maxOutputTokens = maxTokens }
+            generationConfig
         };
 
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";

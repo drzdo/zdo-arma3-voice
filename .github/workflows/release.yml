@@ -8,56 +8,27 @@ permissions:
   contents: write
 
 jobs:
+  build:
+    uses: ./.github/workflows/ci-build.yml
+
   release:
+    needs: build
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: 8.0.x
+          path: artifacts
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Publish Extension (NativeAOT)
-        run: dotnet publish src/ArmaVoice.Extension -c Release -r win-x64 -o publish/extension
-
-      - name: Publish Server (single exe)
-        run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
-
-      - name: Download HEMTT
+      - name: Package release
         shell: pwsh
         run: |
-          $tag = (Invoke-RestMethod "https://api.github.com/repos/BrettMayson/HEMTT/releases/latest").tag_name
-          Invoke-WebRequest -Uri "https://github.com/BrettMayson/HEMTT/releases/download/$tag/windows-x64.zip" -OutFile "hemtt.zip"
-          Expand-Archive hemtt.zip -DestinationPath hemtt_bin
-          Copy-Item hemtt_bin/hemtt.exe hemtt.exe
-
-      - name: Pack PBO
-        run: ./hemtt.exe build
-
-      # Package the Arma 3 mod folder with extension DLL + packed PBO
-      - name: Package mod
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path package/@arma3_mic/addons
-          Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
-          Copy-Item .hemttout/build/addons/arma3_mic.pbo package/@arma3_mic/addons/
-          Compress-Archive -Path package/@arma3_mic -DestinationPath package/arma3_mic_mod.zip
+          Compress-Archive -Path artifacts/@arma3_mic/* -DestinationPath arma3_mic_mod.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            package/arma3_mic_mod.zip
-            publish/server/ArmaVoice.Server.exe
+            arma3_mic_mod.zip
+            artifacts/arma3-mic-server/ArmaVoice.Server.exe
