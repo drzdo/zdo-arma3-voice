@@ -1,18 +1,16 @@
 namespace ArmaVoice.Server.Game;
 
 /// <summary>
-/// SQF function definitions that get registered in-game via compileFinal.
-/// Sent once on client connect as fire-and-forget RPCs (id=0).
+/// SQF function definitions registered in-game via compileFinal.
+/// Return values are serialized by toJSON in the SQF poll handler — do NOT use str.
+/// Exception: use str for SQF types that toJSON can't handle (Side, Group, etc).
 /// </summary>
 public static class SqfFunctions
 {
-    /// <summary>
-    /// Map of function name to SQF body (without the outer quotes — those are added at registration).
-    /// </summary>
     public static readonly Dictionary<string, string> Functions = new()
     {
         ["arma3_mic_fnc_getUnitInfo"] =
-            """params ["_netId"]; private _unit = objectFromNetId _netId; str [name _unit, str side _unit, group _unit == group player, typeOf _unit, rankId _unit]""",
+            """params ["_netId"]; private _unit = objectFromNetId _netId; [name _unit, str side _unit, group _unit == group player, typeOf _unit, rankId _unit]""",
 
         ["arma3_mic_fnc_moveUnits"] =
             """params ["_netIds", "_pos"]; { (objectFromNetId _x) doMove _pos } forEach _netIds; "ok" """,
@@ -39,25 +37,18 @@ public static class SqfFunctions
             """params ["_speed"]; group player setSpeedMode _speed; "ok" """,
 
         ["arma3_mic_fnc_getTeamMembers"] =
-            """params ["_team"]; str (units group player select { assignedTeam _x == _team } apply { _x call BIS_fnc_netId })""",
+            """params ["_team"]; units group player select { assignedTeam _x == _team } apply { _x call BIS_fnc_netId }""",
 
         ["arma3_mic_fnc_getSquad"] =
-            """str ((units group player - [player]) apply { [_x call BIS_fnc_netId, name _x, str side _x, typeOf _x, rankId _x, getPosASL _x, assignedTeam _x] })""",
+            """(units group player - [player]) apply { [_x call BIS_fnc_netId, name _x, str side _x, typeOf _x, rankId _x, getPosASL _x, assignedTeam _x] }""",
     };
 
-    /// <summary>
-    /// Register all SQF functions in the game by sending compileFinal calls as fire-and-forget RPCs.
-    /// SQF single-quoted strings don't need internal escaping for double-quotes,
-    /// but single quotes within the body would. Our function bodies contain only double-quoted
-    /// strings, so wrapping in single quotes is safe.
-    /// </summary>
     public static void RegisterAll(RpcClient rpc)
     {
         Console.WriteLine($"[SqfFunctions] Registering {Functions.Count} functions...");
 
         foreach (var (name, body) in Functions)
         {
-            // SQF: funcName = compileFinal 'body'
             var sqf = $"{name} = compileFinal '{body}'";
             rpc.Fire(sqf);
             Console.WriteLine($"[SqfFunctions]   Registered {name}");

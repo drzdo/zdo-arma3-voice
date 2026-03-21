@@ -108,9 +108,9 @@ public class Program
         var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, dialogueManager);
 
         // Wire up TcpBridge events
-        bridge.OnStateReceived = payload =>
+        bridge.OnStateReceived = stateJson =>
         {
-            gameState.UpdateFromState(payload);
+            gameState.UpdateFromState(stateJson);
             unitRegistry.UpdateFromState(gameState.NearbyUnits);
             unitRegistry.EvictStale(maxAge: 300);
         };

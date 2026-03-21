@@ -118,8 +118,8 @@ public sealed class TcpClient : IDisposable
     }
 
     /// <summary>
-    /// Background thread: reads newline-delimited messages from the server,
-    /// parses "C|id|sqf" commands, formats them as SQF arrays, and enqueues them.
+    /// Background thread: reads newline-delimited JSON messages from the server
+    /// and enqueues them for SQF to poll. SQF will use fromJSON to parse.
     /// </summary>
     private void ReaderLoop()
     {
@@ -131,29 +131,14 @@ public sealed class TcpClient : IDisposable
             {
                 var line = reader.ReadLine();
                 if (line == null)
-                {
-                    // Server closed the connection
                     break;
-                }
 
-                if (line.StartsWith("C|"))
+                // Server sends JSON objects — pass through directly to SQF
+                // SQF will use fromJSON to parse
+                if (line.StartsWith("{"))
                 {
-                    // Format: "C|id|sqf_code"
-                    var afterPrefix = line.Substring(2); // skip "C|"
-                    var separatorIndex = afterPrefix.IndexOf('|');
-                    if (separatorIndex >= 0)
-                    {
-                        var id = afterPrefix.Substring(0, separatorIndex);
-                        var sqf = afterPrefix.Substring(separatorIndex + 1);
-
-                        // SQF parseSimpleArray format: ["id","sqf_code"]
-                        // SQF string escaping: " is escaped as ""
-                        var escapedId = id.Replace("\"", "\"\"");
-                        var escapedSqf = sqf.Replace("\"", "\"\"");
-                        var sqfArray = $"[\"{escapedId}\",\"{escapedSqf}\"]";
-
-                        _inbound.Enqueue(sqfArray);
-                    }
+                    _inbound.Enqueue(line);
+                    Log($"Received: {line[..Math.Min(80, line.Length)]}");
                 }
             }
         }

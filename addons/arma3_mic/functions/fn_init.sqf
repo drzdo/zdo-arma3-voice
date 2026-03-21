@@ -16,7 +16,9 @@ arma3_mic_frameCount = 0;
     } else {
         screenToWorld [0.5, 0.5]
     };
-    "arma3_mic" callExtension ["ptt", ["down", str _lookPos]];
+    "arma3_mic" callExtension toJSON createHashMapFromArray [
+        ["t", "ptt"], ["dir", "down"], ["pos", _lookPos]
+    ];
 },
 {
     // Key up
@@ -25,7 +27,9 @@ arma3_mic_frameCount = 0;
     } else {
         screenToWorld [0.5, 0.5]
     };
-    "arma3_mic" callExtension ["ptt", ["up", str _lookPos]];
+    "arma3_mic" callExtension toJSON createHashMapFromArray [
+        ["t", "ptt"], ["dir", "up"], ["pos", _lookPos]
+    ];
 },
 [0xC7, [false, false, false]]] call CBA_fnc_addKeybind;
 // Default: Home key, no modifiers
@@ -58,16 +62,27 @@ addMissionEventHandler ["EachFrame", {
         private _units = _nearby apply {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
-        private _stateStr = str [_pos, _dir, _units];
-        "arma3_mic" callExtension ["state", [_stateStr]];
+        "arma3_mic" callExtension toJSON createHashMapFromArray [
+            ["t", "state"], ["p", _pos], ["d", _dir], ["u", _units]
+        ];
     };
 
     // Poll for inbound RPC (every frame)
     private _cmd = "arma3_mic" callExtension "poll";
     if (_cmd != "") then {
-        (parseSimpleArray _cmd) params ["_id", "_sqf"];
-        private _result = call compile _sqf;
-        "arma3_mic" callExtension ["respond", [_id, str _result]];
+        private _msg = fromJSON _cmd;
+        private _id = _msg get "id";
+        private _sqf = _msg get "sqf";
+        if (_id == 0) then {
+            // Fire-and-forget (function registration etc) — spawn to avoid stack issues
+            [_sqf] spawn { call compile (_this select 0) };
+        } else {
+            // RPC with response expected
+            private _result = call compile _sqf;
+            "arma3_mic" callExtension toJSON createHashMapFromArray [
+                ["t", "rpc"], ["id", _id], ["r", _result]
+            ];
+        };
     };
 }];
 
@@ -76,11 +91,11 @@ addMissionEventHandler ["EachFrame", {
     while {true} do {
         if (("arma3_mic" callExtension "status") == "0") then {
             private _addr = arma3_mic_serverHost + ":" + str (round arma3_mic_serverPort);
-            private _connectResult = "arma3_mic" callExtension ["connect", [_addr]];
-            diag_log format ["ArmaVoice: connect(%1) = %2", _addr, _connectResult];
-            systemChat format ["ArmaVoice: connecting to %1... result=%2", _addr, _connectResult];
+            "arma3_mic" callExtension toJSON createHashMapFromArray [
+                ["t", "connect"], ["addr", _addr]
+            ];
+            systemChat format ["ArmaVoice: connecting to %1...", _addr];
         } else {
-            // Connected — check once, log on first connect
             if (isNil "arma3_mic_wasConnected") then {
                 arma3_mic_wasConnected = true;
                 systemChat "ArmaVoice: connected";

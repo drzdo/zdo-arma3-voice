@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using ArmaVoice.Server.Net;
 
 namespace ArmaVoice.Server.Game;
@@ -70,7 +71,7 @@ public class RpcClient
     /// <summary>
     /// Complete the pending TCS for the given id. Called by TcpBridge.OnRpcResponse.
     /// </summary>
-    public void HandleResponse(int id, string result)
+    public void HandleResponse(int id, JsonElement result)
     {
         if (id == 0)
         {
@@ -80,7 +81,11 @@ public class RpcClient
 
         if (_pending.TryGetValue(id, out var tcs))
         {
-            tcs.TrySetResult(result);
+            // Convert JsonElement to string for consumers
+            var resultStr = result.ValueKind == JsonValueKind.String
+                ? result.GetString() ?? ""
+                : result.GetRawText();
+            tcs.TrySetResult(resultStr);
         }
         else
         {

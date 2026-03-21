@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace ArmaVoice.Server.Game;
 
 public class UnitInfo
@@ -135,20 +137,23 @@ public class UnitRegistry
         try
         {
             var result = await _rpc.CallAsync("call arma3_mic_fnc_getSquad");
-            var parsed = SqfParser.Parse(result);
-            if (parsed is not List<object> arr)
+
+            // Result is JSON: [["netId","name","side","type",rank,[x,y,z],"team"], ...]
+            using var doc = JsonDocument.Parse(result);
+            var arr = doc.RootElement;
+            if (arr.ValueKind != JsonValueKind.Array)
             {
-                Console.WriteLine($"[UnitRegistry] Failed to parse squad data: {result[..Math.Min(80, result.Length)]}");
+                Console.WriteLine($"[UnitRegistry] Squad data not an array: {result[..Math.Min(80, result.Length)]}");
                 return;
             }
 
             lock (_lock)
             {
-                foreach (var item in arr)
+                foreach (var unit in arr.EnumerateArray())
                 {
-                    if (item is not List<object> unit || unit.Count < 7) continue;
+                    if (unit.ValueKind != JsonValueKind.Array || unit.GetArrayLength() < 6) continue;
 
-                    var netId = unit[0]?.ToString() ?? "";
+                    var netId = unit[0].GetString() ?? "";
                     if (string.IsNullOrEmpty(netId)) continue;
 
                     if (!_units.TryGetValue(netId, out var info))
@@ -157,19 +162,16 @@ public class UnitRegistry
                         _units[netId] = info;
                     }
 
-                    info.Name = unit[1]?.ToString() ?? "";
-                    info.Side = unit[2]?.ToString() ?? "";
+                    info.Name = unit[1].GetString() ?? "";
+                    info.Side = unit[2].GetString() ?? "";
                     info.SameGroup = true;
-                    info.UnitType = unit[3]?.ToString() ?? "";
-                    info.Rank = unit[4] switch { double d => (int)d, int i => i, _ => 0 };
+                    info.UnitType = unit[3].GetString() ?? "";
+                    info.Rank = unit[4].TryGetInt32(out var r) ? r : 0;
 
-                    if (unit[5] is List<object> posArr && posArr.Count >= 3)
+                    var posEl = unit[5];
+                    if (posEl.ValueKind == JsonValueKind.Array && posEl.GetArrayLength() >= 3)
                     {
-                        info.Position = [
-                            posArr[0] is double px ? (float)px : 0f,
-                            posArr[1] is double py ? (float)py : 0f,
-                            posArr[2] is double pz ? (float)pz : 0f
-                        ];
+                        info.Position = [posEl[0].GetSingle(), posEl[1].GetSingle(), posEl[2].GetSingle()];
                     }
 
                     info.InfoLoaded = true;
@@ -177,7 +179,7 @@ public class UnitRegistry
                 }
             }
 
-            Console.WriteLine($"[UnitRegistry] Squad synced: {arr.Count} members.");
+            Console.WriteLine($"[UnitRegistry] Squad synced: {arr.GetArrayLength()} members.");
         }
         catch (Exception ex)
         {
@@ -221,15 +223,13 @@ public class UnitRegistry
     {
         try
         {
-            // SQF call: 'netId' call arma3_mic_fnc_getUnitInfo
-            // Returns: str [name, side, sameGroup, typeOf, rankId]
-            // Which is: ["Sgt. Miller","WEST",true,"B_Soldier_F",3]
             var sqf = $"'{netId}' call arma3_mic_fnc_getUnitInfo";
             var result = await _rpc.CallAsync(sqf);
 
-            // Parse the SQF array result
-            var parsed = SqfParser.Parse(result);
-            if (parsed is not List<object> arr || arr.Count < 5)
+            // Result is JSON: ["name","side",sameGroup,"type",rank]
+            using var doc = JsonDocument.Parse(result);
+            var arr = doc.RootElement;
+            if (arr.ValueKind != JsonValueKind.Array || arr.GetArrayLength() < 5)
             {
                 Console.WriteLine($"[UnitRegistry] Invalid unit info for {netId}: {result[..Math.Min(80, result.Length)]}");
                 return;
@@ -238,18 +238,13 @@ public class UnitRegistry
             lock (_lock)
             {
                 if (!_units.TryGetValue(netId, out var info))
-                    return; // Unit was evicted in the meantime
+                    return;
 
-                info.Name = arr[0]?.ToString() ?? "";
-                info.Side = arr[1]?.ToString() ?? "";
-                info.SameGroup = arr[2] is true;
-                info.UnitType = arr[3]?.ToString() ?? "";
-                info.Rank = arr[4] switch
-                {
-                    double d => (int)d,
-                    int i => i,
-                    _ => 0
-                };
+                info.Name = arr[0].GetString() ?? "";
+                info.Side = arr[1].GetString() ?? "";
+                info.SameGroup = arr[2].ValueKind == JsonValueKind.True;
+                info.UnitType = arr[3].GetString() ?? "";
+                info.Rank = arr[4].TryGetInt32(out var r) ? r : 0;
                 info.InfoLoaded = true;
 
                 Console.WriteLine($"[UnitRegistry] Loaded info for {netId}: {info.Name} ({info.Side}, {info.UnitType})");

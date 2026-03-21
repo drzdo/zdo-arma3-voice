@@ -1,12 +1,13 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 
 namespace ArmaVoice.Server.Net;
 
 /// <summary>
 /// TCP server that listens for a single client connection (the Arma extension).
-/// Reads newline-delimited messages with type-tag prefixes and dispatches to callbacks.
+/// All messages are newline-delimited JSON with a "t" field for type.
 /// </summary>
 public sealed class TcpBridge : IDisposable
 {
@@ -20,16 +21,16 @@ public sealed class TcpBridge : IDisposable
 
     public bool IsClientConnected { get; private set; }
 
-    /// <summary>Fired when a state message arrives (raw SQF array string after "S|").</summary>
-    public Action<string>? OnStateReceived { get; set; }
+    /// <summary>Fired when a state message arrives (JSON with p, d, u fields).</summary>
+    public Action<JsonElement>? OnStateReceived { get; set; }
 
-    /// <summary>Fired when an RPC response arrives (id, result string).</summary>
-    public Action<int, string>? OnRpcResponse { get; set; }
+    /// <summary>Fired when an RPC response arrives (id, result as JsonElement).</summary>
+    public Action<int, JsonElement>? OnRpcResponse { get; set; }
 
     /// <summary>Fired when a PTT event arrives ("down"/"up", [x,y,z] position).</summary>
     public Action<string, float[]>? OnPttEvent { get; set; }
 
-    /// <summary>Fired when a client connects. Used to trigger function registration.</summary>
+    /// <summary>Fired when a client connects.</summary>
     public Action? OnClientConnected { get; set; }
 
     public TcpBridge(string host = "0.0.0.0", int port = 9500)
@@ -38,10 +39,6 @@ public sealed class TcpBridge : IDisposable
         _port = port;
     }
 
-    /// <summary>
-    /// Start listening for connections. Blocks until cancellation is requested.
-    /// Accepts one client at a time; when a client disconnects, goes back to accepting.
-    /// </summary>
     public async Task StartAsync(CancellationToken ct)
     {
         var ip = IPAddress.Parse(_host);
@@ -49,10 +46,7 @@ public sealed class TcpBridge : IDisposable
         _listener.Start();
         Console.WriteLine($"[TcpBridge] Listening on {_host}:{_port}");
 
-        ct.Register(() =>
-        {
-            _listener.Stop();
-        });
+        ct.Register(() => _listener.Stop());
 
         while (!ct.IsCancellationRequested && !_disposed)
         {
@@ -61,28 +55,16 @@ public sealed class TcpBridge : IDisposable
                 Console.WriteLine("[TcpBridge] Waiting for client...");
                 var client = await _listener.AcceptTcpClientAsync(ct);
                 Console.WriteLine($"[TcpBridge] Client connected from {client.Client.RemoteEndPoint}");
-
                 await HandleClientAsync(client, ct);
             }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (ObjectDisposedException)
-            {
-                break;
-            }
-            catch (SocketException) when (ct.IsCancellationRequested)
-            {
-                break;
-            }
+            catch (OperationCanceledException) { break; }
+            catch (ObjectDisposedException) { break; }
+            catch (SocketException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
                 Console.WriteLine($"[TcpBridge] Accept error: {ex.Message}");
                 if (!ct.IsCancellationRequested)
-                {
                     await Task.Delay(1000, ct).ConfigureAwait(false);
-                }
             }
         }
 
@@ -90,21 +72,22 @@ public sealed class TcpBridge : IDisposable
     }
 
     /// <summary>
-    /// Send an RPC call to the connected client. Format: "C|{id}|{sqf}\n"
+    /// Send a JSON RPC call to the extension. SQF will poll and fromJSON it.
     /// </summary>
     public void SendRpc(int id, string sqf)
     {
+        var json = JsonSerializer.Serialize(new { id, sqf });
+        SendLine(json);
+    }
+
+    private void SendLine(string line)
+    {
         lock (_writeLock)
         {
-            if (!IsClientConnected || _writer == null)
-            {
-                Console.WriteLine($"[TcpBridge] Cannot send RPC (id={id}): no client connected");
-                return;
-            }
-
+            if (!IsClientConnected || _writer == null) return;
             try
             {
-                _writer.WriteLine($"C|{id}|{sqf}");
+                _writer.WriteLine(line);
             }
             catch (Exception ex)
             {
@@ -135,138 +118,60 @@ public sealed class TcpBridge : IDisposable
             while (!ct.IsCancellationRequested && !_disposed && client.Connected)
             {
                 string? line;
-                try
-                {
-                    line = await reader.ReadLineAsync(ct);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (IOException)
-                {
-                    break;
-                }
+                try { line = await reader.ReadLineAsync(ct); }
+                catch (OperationCanceledException) { break; }
+                catch (IOException) { break; }
 
-                if (line == null)
-                {
-                    // Client disconnected (EOF)
-                    break;
-                }
-
-                if (line.Length < 2 || line[1] != '|')
-                {
-                    Console.WriteLine($"[TcpBridge] Malformed message (length={line.Length}): {line[..Math.Min(50, line.Length)]}");
-                    continue;
-                }
-
-                var tag = line[0];
-                var payload = line[2..];
+                if (line == null) break;
+                if (string.IsNullOrWhiteSpace(line)) continue;
 
                 try
                 {
-                    DispatchMessage(tag, payload);
+                    using var doc = JsonDocument.Parse(line);
+                    var root = doc.RootElement;
+                    var type = root.GetProperty("t").GetString();
+
+                    switch (type)
+                    {
+                        case "state":
+                            OnStateReceived?.Invoke(root);
+                            break;
+
+                        case "rpc":
+                            var id = root.GetProperty("id").GetInt32();
+                            var result = root.GetProperty("r");
+                            OnRpcResponse?.Invoke(id, result.Clone());
+                            break;
+
+                        case "ptt":
+                            var dir = root.GetProperty("dir").GetString() ?? "";
+                            var posArr = root.GetProperty("pos");
+                            var pos = new float[posArr.GetArrayLength()];
+                            for (int i = 0; i < pos.Length; i++)
+                                pos[i] = posArr[i].GetSingle();
+                            OnPttEvent?.Invoke(dir, pos);
+                            break;
+
+                        default:
+                            Console.WriteLine($"[TcpBridge] Unknown type: {type}");
+                            break;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[TcpBridge] Error dispatching '{tag}' message: {ex.Message}");
+                    Console.WriteLine($"[TcpBridge] Parse error: {ex.Message} | {line[..Math.Min(80, line.Length)]}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[TcpBridge] Client read loop error: {ex.Message}");
+            Console.WriteLine($"[TcpBridge] Client error: {ex.Message}");
         }
         finally
         {
-            lock (_writeLock)
-            {
-                CleanupClient();
-            }
+            lock (_writeLock) { CleanupClient(); }
             Console.WriteLine("[TcpBridge] Client disconnected.");
         }
-    }
-
-    private void DispatchMessage(char tag, string payload)
-    {
-        switch (tag)
-        {
-            case 'S':
-                OnStateReceived?.Invoke(payload);
-                break;
-
-            case 'R':
-            {
-                // Format: "id|result"
-                var separatorIndex = payload.IndexOf('|');
-                if (separatorIndex < 0)
-                {
-                    Console.WriteLine($"[TcpBridge] Malformed RPC response: {payload[..Math.Min(50, payload.Length)]}");
-                    return;
-                }
-
-                var idStr = payload[..separatorIndex];
-                var result = payload[(separatorIndex + 1)..];
-
-                if (int.TryParse(idStr, out var id))
-                {
-                    OnRpcResponse?.Invoke(id, result);
-                }
-                else
-                {
-                    Console.WriteLine($"[TcpBridge] Invalid RPC response id: {idStr}");
-                }
-
-                break;
-            }
-
-            case 'P':
-            {
-                // Format: "down|[x,y,z]" or "up|[x,y,z]"
-                var separatorIndex = payload.IndexOf('|');
-                if (separatorIndex < 0)
-                {
-                    Console.WriteLine($"[TcpBridge] Malformed PTT event: {payload[..Math.Min(50, payload.Length)]}");
-                    return;
-                }
-
-                var direction = payload[..separatorIndex]; // "down" or "up"
-                var posStr = payload[(separatorIndex + 1)..]; // "[x,y,z]"
-
-                var pos = ParsePositionArray(posStr);
-                OnPttEvent?.Invoke(direction, pos);
-                break;
-            }
-
-            default:
-                Console.WriteLine($"[TcpBridge] Unknown message tag: '{tag}'");
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Parse a simple SQF position array like "[3050,5020,0]" into float[].
-    /// </summary>
-    private static float[] ParsePositionArray(string s)
-    {
-        s = s.Trim();
-        if (s.StartsWith('[') && s.EndsWith(']'))
-        {
-            s = s[1..^1];
-        }
-
-        var parts = s.Split(',');
-        var result = new float[parts.Length];
-        for (int i = 0; i < parts.Length; i++)
-        {
-            if (float.TryParse(parts[i].Trim(), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var val))
-            {
-                result[i] = val;
-            }
-        }
-
-        return result;
     }
 
     private void CleanupClient()
@@ -282,12 +187,7 @@ public sealed class TcpBridge : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-
-        lock (_writeLock)
-        {
-            CleanupClient();
-        }
-
+        lock (_writeLock) { CleanupClient(); }
         try { _listener?.Stop(); } catch { }
         _listener = null;
     }

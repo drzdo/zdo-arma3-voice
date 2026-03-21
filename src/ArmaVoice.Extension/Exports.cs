@@ -1,18 +1,12 @@
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace ArmaVoice.Extension;
 
-/// <summary>
-/// Main entry point. Exports the 3 Arma 3 extension functions using [UnmanagedCallersOnly].
-/// </summary>
 public static class Exports
 {
     private static readonly CommandQueue InboundQueue = new();
     private static readonly TcpClient Client = new(InboundQueue);
-
-    // -----------------------------------------------------------------------
-    // Arma 3 callExtension entry points
-    // -----------------------------------------------------------------------
 
     [UnmanagedCallersOnly(EntryPoint = "RVExtensionVersion")]
     public static void RVExtensionVersion(nint output, int outputSize)
@@ -24,68 +18,71 @@ public static class Exports
     [UnmanagedCallersOnly(EntryPoint = "RVExtension")]
     public static void RVExtension(nint output, int outputSize, nint function)
     {
-        var func = ReadString(function);
+        var input = ReadString(function);
 
-        switch (func)
+        // Simple commands (non-JSON)
+        switch (input)
         {
             case "status":
                 WriteOutput(output, outputSize, Client.IsConnected ? "1" : "0");
-                break;
-
+                return;
             case "poll":
-                var message = InboundQueue.Dequeue();
-                WriteOutput(output, outputSize, message ?? "");
-                break;
-
-            default:
-                WriteOutput(output, outputSize, "");
-                break;
+                WriteOutput(output, outputSize, InboundQueue.Dequeue() ?? "");
+                return;
         }
+
+        // JSON messages from SQF
+        try
+        {
+            using var doc = JsonDocument.Parse(input);
+            var root = doc.RootElement;
+            var type = root.GetProperty("t").GetString();
+
+            switch (type)
+            {
+                case "connect":
+                    var addr = root.GetProperty("addr").GetString() ?? "";
+                    TcpClient.Log($"Connect: {addr}");
+                    Client.Connect(addr);
+                    WriteOutput(output, outputSize, Client.IsConnected ? "1" : "0");
+                    break;
+
+                case "state":
+                    // Forward entire JSON to server
+                    Client.Send(input);
+                    break;
+
+                case "rpc":
+                    // Forward entire JSON to server
+                    Client.Send(input);
+                    break;
+
+                case "ptt":
+                    // Forward entire JSON to server
+                    Client.Send(input);
+                    break;
+
+                default:
+                    TcpClient.Log($"Unknown message type: {type}");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            TcpClient.Log($"RVExtension error: {ex.Message} | input: {input[..Math.Min(100, input.Length)]}");
+        }
+
+        WriteOutput(output, outputSize, "");
     }
 
     [UnmanagedCallersOnly(EntryPoint = "RVExtensionArgs")]
     public static int RVExtensionArgs(nint output, int outputSize, nint function, nint argv, int argc)
     {
-        var func = ReadString(function);
-        var args = ReadArgs(argv, argc);
-
-        switch (func)
-        {
-            case "connect":
-                if (args.Length >= 1)
-                {
-                    TcpClient.Log($"RVExtensionArgs: connect({args[0]})");
-                    Client.Connect(args[0]);
-                    WriteOutput(output, outputSize, Client.IsConnected ? "1" : "0");
-                }
-                break;
-
-            case "state":
-                if (args.Length >= 1)
-                    Client.Send($"S|{args[0]}");
-                break;
-
-            case "respond":
-                if (args.Length >= 2)
-                    Client.Send($"R|{args[0]}|{args[1]}");
-                break;
-
-            case "ptt":
-                if (args.Length >= 2)
-                    Client.Send($"P|{args[0]}|{args[1]}");
-                break;
-        }
-
+        // Not used — all communication goes through simple form with JSON
+        WriteOutput(output, outputSize, "");
         return 0;
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Write a C# string to the unmanaged output buffer as UTF-8, null-terminated.
-    /// </summary>
     private static unsafe void WriteOutput(nint output, int outputSize, string text)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(text);
@@ -94,29 +91,8 @@ public static class Exports
         ((byte*)output)[len] = 0;
     }
 
-    /// <summary>
-    /// Read a null-terminated ANSI string from an unmanaged pointer.
-    /// </summary>
     private static string ReadString(nint ptr)
     {
         return Marshal.PtrToStringAnsi(ptr) ?? "";
-    }
-
-    /// <summary>
-    /// Read an argv array. The nint is a pointer to an array of nint pointers to strings.
-    /// </summary>
-    private static unsafe string[] ReadArgs(nint argv, int argc)
-    {
-        var args = new string[argc];
-        var ptrs = (nint*)argv;
-        for (int i = 0; i < argc; i++)
-        {
-            var s = ReadString(ptrs[i]);
-            // SQF wraps string arguments in quotes when converting for callExtension
-            if (s.Length >= 2 && s[0] == '"' && s[^1] == '"')
-                s = s[1..^1];
-            args[i] = s;
-        }
-        return args;
     }
 }
