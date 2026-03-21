@@ -23,8 +23,11 @@ jobs:
       - name: Package release
         shell: pwsh
         run: |
-          Rename-Item artifacts/arma3_mic_mod artifacts/@arma3_mic
-          Compress-Archive -Path artifacts/@arma3_mic -DestinationPath arma3_mic_mod.zip
+          New-Item -ItemType Directory -Force -Path staging
+          Rename-Item artifacts/arma3_mic_mod staging/@arma3_mic
+          Push-Location staging
+          Compress-Archive -Path @arma3_mic -DestinationPath ../arma3_mic_mod.zip
+          Pop-Location
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
