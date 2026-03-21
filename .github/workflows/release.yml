@@ -47,12 +47,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path hemtt_build/.hemtt | Out-Null
           Copy-Item -Recurse mod/addons hemtt_build/addons
-          Set-Content hemtt_build/.hemtt/project.toml @"
-          [project]
-          name = "arma3_mic"
-          prefix = "arma3_mic"
-          author = "ArmaVoice"
-          "@
+          "[project]`nname = `"arma3_mic`"`nprefix = `"arma3_mic`"`nauthor = `"ArmaVoice`"" | Set-Content hemtt_build/.hemtt/project.toml -Encoding utf8
           Push-Location hemtt_build
           ../hemtt.exe build
           Pop-Location
