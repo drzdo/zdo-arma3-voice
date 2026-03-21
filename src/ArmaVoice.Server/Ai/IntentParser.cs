@@ -3,47 +3,64 @@ using System.Text.Json.Serialization;
 
 namespace ArmaVoice.Server.Ai;
 
-/// <summary>
-/// Structured intent parsed from player speech by the LLM.
-/// </summary>
+// ── LLM output contract ─────────────────────────────────
+
 public class IntentParsed
 {
-    /// <summary>WHAT: move, attack, hold, regroup, formation, dialogue</summary>
     [JsonPropertyName("action")]
     public string Action { get; set; } = "";
 
-    /// <summary>TO WHOM: unit references — names, "all", "team_red", "unit_2", etc.</summary>
+    /// <summary>
+    /// Unit netIds, names, team colors ("red","green","blue","yellow"), or "all".
+    /// LLM is given the full unit registry and should return netIds when possible.
+    /// </summary>
     [JsonPropertyName("units")]
     public List<string> Units { get; set; } = [];
 
-    /// <summary>WHERE: "look_target", "100m_forward", "200m_north", explicit coords</summary>
     [JsonPropertyName("location")]
-    public string? Location { get; set; }
+    public LocationParsed? Location { get; set; }
 
-    /// <summary>Attack target or dialogue target NPC name</summary>
+    /// <summary>Attack target or dialogue target — netId or name.</summary>
     [JsonPropertyName("target")]
     public string? Target { get; set; }
 
-    /// <summary>Dialogue text (what the player said to the NPC)</summary>
+    /// <summary>Dialogue: what the player said to the NPC.</summary>
     [JsonPropertyName("text")]
     public string? Text { get; set; }
 
-    /// <summary>Formation type: column, line, wedge, etc.</summary>
+    /// <summary>SQF formation constant: COLUMN, LINE, WEDGE, VEE, STAG COLUMN, DIAMOND, FILE, ECH LEFT, ECH RIGHT</summary>
     [JsonPropertyName("formation")]
     public string? Formation { get; set; }
 
-    /// <summary>HOW (stance): "prone", "crouch", "standing", "auto"</summary>
+    /// <summary>SQF stance: DOWN (prone), MIDDLE (crouch), UP (standing), AUTO</summary>
     [JsonPropertyName("stance")]
     public string? Stance { get; set; }
 
-    /// <summary>HOW (speed): "sprint", "run", "walk"</summary>
+    /// <summary>SQF speed mode: FULL (sprint), NORMAL (run), LIMITED (walk)</summary>
     [JsonPropertyName("speed")]
     public string? Speed { get; set; }
 }
 
-/// <summary>
-/// Summary of a known unit, provided as context to the LLM for intent parsing.
-/// </summary>
+public class LocationParsed
+{
+    /// <summary>"look_target", "relative", "azimuth"</summary>
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "look_target";
+
+    [JsonPropertyName("distance")]
+    public float? Distance { get; set; }
+
+    /// <summary>For relative: "forward","back","left","right","north","south","east","west"</summary>
+    [JsonPropertyName("direction")]
+    public string? Direction { get; set; }
+
+    /// <summary>For azimuth: degrees 0-360</summary>
+    [JsonPropertyName("azimuth")]
+    public float? Azimuth { get; set; }
+}
+
+// ── Context passed to LLM ───────────────────────────────
+
 public class UnitSummary
 {
     public string NetId { get; set; } = "";
@@ -53,11 +70,8 @@ public class UnitSummary
     public string UnitType { get; set; } = "";
 }
 
-/// <summary>
-/// Uses Gemini Flash 2.0 to parse player speech into structured intents.
-/// Calls the Gemini API with a system prompt that explains available actions
-/// and known unit context, then parses the JSON response.
-/// </summary>
+// ── Parser ───────────────────────────────────────────────
+
 public class IntentParser
 {
     private readonly HttpClient _http;
@@ -72,88 +86,83 @@ public class IntentParser
     public IntentParser(string geminiApiKey)
     {
         _apiKey = geminiApiKey;
-        _http = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(15)
-        };
+        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     }
 
-    /// <summary>
-    /// Parse player speech text into a structured intent using Gemini Flash 2.0.
-    /// Returns null if parsing fails.
-    /// </summary>
     public async Task<IntentParsed?> ParseAsync(string speechText, List<UnitSummary> knownUnits)
     {
         var unitContext = string.Join("\n", knownUnits.Select(u =>
-            $"- NetId: {u.NetId}, Name: \"{u.Name}\", Side: {u.Side}, Type: {u.UnitType}, SameGroup: {u.SameGroup}"));
+            $"  - netId=\"{u.NetId}\" name=\"{u.Name}\" side={u.Side} type={u.UnitType} sameGroup={u.SameGroup}"));
 
         var systemPrompt = $"""
-            You are a military voice command parser for Arma 3. Parse the player's speech into a structured JSON command.
-            The player may speak in any language (English, Russian, etc). Parse intent regardless of language.
+            You are a military voice command parser for Arma 3.
+            Parse the player's speech into a structured JSON command.
+            The player may speak in any language (English, Russian, etc).
 
-            Each command has up to 4 dimensions:
+            IMPORTANT: The LLM does ALL parsing. Return final values ready for execution.
+            Do NOT return raw text — return structured, normalized values.
 
-            TO WHOM ("units" field) — who should execute:
-            - "all" — entire squad
-            - "team_red", "team_green", "team_blue", "team_yellow" — Arma team colors
-            - Unit name: "Miller", "the medic", "unit 2" (index in squad), "unit 2 and 3"
-            - If not specified, default to ["all"]
-
-            WHAT ("action" field) — the action:
-            - "move" — move to a location. Needs "location".
-            - "attack" — engage a target. Needs "target" (enemy name/reference).
-            - "hold" — stop and hold current position.
-            - "regroup" — regroup on the player / fall back to player.
-            - "formation" — change formation. Needs "formation" (column, line, wedge, vee, staggered column, diamond, file, echelon left, echelon right).
-            - "dialogue" — player is talking to an NPC conversationally. Needs "target" (NPC name) and "text" (what player said).
-
-            HOW (optional modifiers, can accompany any action):
-            - "stance": "prone"/"crouch"/"standing"/"auto" — body posture while executing.
-              E.g. "move there prone", "hold position crouched", "crawl" = prone.
-            - "speed": "sprint"/"run"/"walk" — movement speed.
-              E.g. "run to that building", "move slowly" = walk.
-
-            WHERE ("location" field):
-            - "look_target" — where the player's crosshair/map cursor is pointing. Use for "there", "that building", "that position", "here", etc.
-            - "Xm_forward", "Xm_back", "Xm_left", "Xm_right", "Xm_north", "Xm_south", "Xm_east", "Xm_west" — relative distance. E.g. "100 meters ahead" = "100m_forward", "50m to the left" = "50m_left".
-            - If not specified and not needed, omit.
-
-            Known units in the area:
+            Known units:
             {unitContext}
 
-            Return ONLY valid JSON, no markdown, no explanation. Omit null fields.
+            === JSON SCHEMA ===
+
+            action (required, string): one of "move","attack","hold","regroup","formation","dialogue"
+
+            units (required, array of strings): WHO should execute.
+              - Return netIds from the known units list above when you can identify the unit.
+              - "all" = entire squad.
+              - Team color names: "red","green","blue","yellow" = Arma team colors.
+              - If the player says "second" or "unit 2", find the 2nd unit in the list where sameGroup=true and return its netId.
+              - If the player says a name like "Miller", find the matching unit and return its netId.
+              - If you cannot match to a known unit, return the name as-is (the server will fuzzy-match).
+              - Default to ["all"] if not specified.
+
+            location (optional, object): WHERE. Only for "move" action.
+              type="look_target" — player said "there","that position","here". No other fields needed.
+              type="relative" + distance (meters) + direction ("forward","back","left","right","north","south","east","west")
+                Example: "100 meters ahead" -> type="relative", distance=100, direction="forward"
+                "forward"/"front"/"ahead" = same direction the player is facing.
+              type="azimuth" + distance (meters) + azimuth (degrees 0-360)
+                Example: "200 meters azimuth 320" -> type="azimuth", distance=200, azimuth=320
+
+            target (optional, string): for "attack" = target unit netId or name. For "dialogue" = NPC netId or name.
+
+            text (optional, string): for "dialogue" only — what the player said to the NPC.
+
+            formation (optional, string): SQF formation constant, one of:
+              "COLUMN","LINE","WEDGE","VEE","STAG COLUMN","DIAMOND","FILE","ECH LEFT","ECH RIGHT"
+
+            stance (optional, string): SQF unit pos, one of: "DOWN" (prone/crawl), "MIDDLE" (crouch), "UP" (standing), "AUTO"
+              Can accompany any action. E.g. "move there prone" -> stance="DOWN"
+
+            speed (optional, string): SQF speed mode, one of: "FULL" (sprint/fast), "NORMAL" (run), "LIMITED" (walk/slow)
+              Can accompany any action. E.g. "run to that building" -> speed="FULL"
+
+            === RULES ===
+            - Return ONLY valid JSON. No markdown, no explanation.
+            - Omit null/absent fields.
+            - Use SQF constants for formation/stance/speed (uppercase as shown above).
+            - Prefer returning netIds over names for units and targets.
             """ +
             """
-            Example: {"action":"move","units":["team_red","team_green"],"location":"look_target","stance":"prone","speed":"run"}
-            Example: {"action":"regroup","units":["all"]}
-            Example: {"action":"move","units":["Miller"],"location":"100m_forward","stance":"crouch"}
-            Example: {"action":"dialogue","target":"Miller","text":"what's the situation ahead?"}
+
+            === EXAMPLES ===
+            {"action":"move","units":["2:3","2:7"],"location":{"type":"look_target"},"stance":"DOWN","speed":"FULL"}
+            {"action":"move","units":["2:3"],"location":{"type":"relative","distance":100,"direction":"forward"},"stance":"MIDDLE"}
+            {"action":"move","units":["all"],"location":{"type":"azimuth","distance":200,"azimuth":320}}
+            {"action":"attack","units":["all"],"target":"2:10"}
+            {"action":"regroup","units":["all"]}
+            {"action":"hold","units":["2:3","2:7"],"stance":"DOWN"}
+            {"action":"formation","units":["all"],"formation":"WEDGE"}
+            {"action":"dialogue","target":"2:3","text":"what's the situation ahead?"}
             """;
 
         var requestBody = new
         {
-            system_instruction = new
-            {
-                parts = new[]
-                {
-                    new { text = systemPrompt }
-                }
-            },
-            contents = new[]
-            {
-                new
-                {
-                    parts = new[]
-                    {
-                        new { text = speechText }
-                    }
-                }
-            },
-            generationConfig = new
-            {
-                temperature = 0.1,
-                maxOutputTokens = 256
-            }
+            system_instruction = new { parts = new[] { new { text = systemPrompt } } },
+            contents = new[] { new { parts = new[] { new { text = speechText } } } },
+            generationConfig = new { temperature = 0.1, maxOutputTokens = 300 }
         };
 
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={_apiKey}";
@@ -162,26 +171,18 @@ public class IntentParser
         {
             var json = JsonSerializer.Serialize(requestBody, JsonOptions);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
             var response = await _http.PostAsync(url, content);
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[IntentParser] Gemini API error ({response.StatusCode}): {responseBody[..Math.Min(200, responseBody.Length)]}");
+                Console.WriteLine($"[IntentParser] Gemini error ({response.StatusCode}): {responseBody[..Math.Min(200, responseBody.Length)]}");
                 return null;
             }
 
-            // Parse Gemini response: { candidates: [{ content: { parts: [{ text: "..." }] } }] }
             using var doc = JsonDocument.Parse(responseBody);
-            var root = doc.RootElement;
-
-            var candidates = root.GetProperty("candidates");
-            if (candidates.GetArrayLength() == 0)
-            {
-                Console.WriteLine("[IntentParser] Gemini returned no candidates.");
-                return null;
-            }
+            var candidates = doc.RootElement.GetProperty("candidates");
+            if (candidates.GetArrayLength() == 0) return null;
 
             var textResponse = candidates[0]
                 .GetProperty("content")
@@ -189,41 +190,23 @@ public class IntentParser
                 .GetProperty("text")
                 .GetString() ?? "";
 
-            // Strip markdown code fences if present
+            // Strip markdown fences
             textResponse = textResponse.Trim();
             if (textResponse.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-            {
                 textResponse = textResponse[7..];
-            }
             else if (textResponse.StartsWith("```"))
-            {
                 textResponse = textResponse[3..];
-            }
-
             if (textResponse.EndsWith("```"))
-            {
                 textResponse = textResponse[..^3];
-            }
-
             textResponse = textResponse.Trim();
 
             var intent = JsonSerializer.Deserialize<IntentParsed>(textResponse, JsonOptions);
-            Console.WriteLine($"[IntentParser] Parsed: action={intent?.Action} units=[{string.Join(", ", intent?.Units ?? [])}] location={intent?.Location} target={intent?.Target} stance={intent?.Stance} speed={intent?.Speed}");
+            Console.WriteLine($"[IntentParser] action={intent?.Action} units=[{string.Join(",", intent?.Units ?? [])}] location={intent?.Location?.Type} target={intent?.Target} stance={intent?.Stance} speed={intent?.Speed}");
             return intent;
-        }
-        catch (JsonException ex)
-        {
-            Console.WriteLine($"[IntentParser] JSON parse error: {ex.Message}");
-            return null;
-        }
-        catch (HttpRequestException ex)
-        {
-            Console.WriteLine($"[IntentParser] Gemini API request failed: {ex.Message}");
-            return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[IntentParser] Unexpected error: {ex.Message}");
+            Console.WriteLine($"[IntentParser] Error: {ex.Message}");
             return null;
         }
     }

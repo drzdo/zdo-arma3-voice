@@ -12,8 +12,8 @@ public class Program
     {
         Console.WriteLine("=== ArmaVoice Server ===");
 
-        // Load config — default path is config.yaml next to the exe, overridable via --config
-        var configPath = "config.yaml";
+        // --config is required
+        string? configPath = null;
         for (int i = 0; i < args.Length - 1; i++)
         {
             if (args[i] is "--config" or "-c")
@@ -21,6 +21,12 @@ public class Program
                 configPath = args[i + 1];
                 break;
             }
+        }
+
+        if (configPath == null)
+        {
+            Console.Error.WriteLine("Usage: ArmaVoice.Server --config <path>");
+            return;
         }
 
         var config = AppConfig.Load(configPath);
