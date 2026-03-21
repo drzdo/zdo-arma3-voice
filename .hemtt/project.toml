@@ -1,3 +1,8 @@
 name = "arma3_mic"
 prefix = "arma3_mic"
 author = "ArmaVoice"
+
+[version]
+major = 0
+minor = 1
+patch = 0
