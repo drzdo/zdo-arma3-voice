@@ -89,7 +89,7 @@ public class WindowsRecognizer : ISpeechRecognizer
         }
         catch (Exception ex)
         {
-            Log.Error("WindowsSTT", $"Recognition failed: {ex.Message}");
+            Log.Error("WindowsSTT", $"Recognition failed: {ex}");
             return Task.FromResult("");
         }
     }

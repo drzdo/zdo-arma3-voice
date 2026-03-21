@@ -14,26 +14,29 @@ public class SpatialSampleProvider : ISampleProvider
     private readonly GameState _gameState;
     private readonly string _npcNetId;
     private readonly UnitRegistry _unitRegistry;
+    private readonly bool _isRadio;
     private int _position;
     private float _prevFilteredL;
     private float _prevFilteredR;
 
     public WaveFormat WaveFormat { get; }
 
+    /// <param name="isRadio">If true, skip distance attenuation and muffling (radio is full volume, only pan).</param>
     public SpatialSampleProvider(
         float[] monoSamples,
         int sampleRate,
         GameState gameState,
         string npcNetId,
-        UnitRegistry unitRegistry)
+        UnitRegistry unitRegistry,
+        bool isRadio = false)
     {
         _monoSamples = monoSamples;
         _gameState = gameState;
         _npcNetId = npcNetId;
         _unitRegistry = unitRegistry;
+        _isRadio = isRadio;
         _position = 0;
 
-        // Output is stereo
         WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
     }
 
@@ -75,18 +78,14 @@ public class SpatialSampleProvider : ISampleProvider
         float leftGain = MathF.Cos(panAngle);
         float rightGain = MathF.Sin(panAngle);
 
-        // Distance attenuation
-        float attenuation = 1f / MathF.Max(1f, distance / 5f);
+        // Radio: full volume, no muffling. Spatial: distance-based attenuation + low-pass.
+        float attenuation = _isRadio ? 1f : 1f / MathF.Max(1f, distance / 5f);
+        float alpha = _isRadio ? 1f : Math.Clamp(1f - distance / 50f, 0.1f, 1f);
 
-        // Low-pass alpha (distance-based muffling)
-        float alpha = Math.Clamp(1f - distance / 50f, 0.1f, 1f);
-
-        // Process samples
         for (int i = 0; i < framesToProcess; i++)
         {
             float mono = _monoSamples[_position + i] * attenuation;
 
-            // Apply low-pass per channel
             float filteredL = alpha * (mono * leftGain) + (1f - alpha) * _prevFilteredL;
             float filteredR = alpha * (mono * rightGain) + (1f - alpha) * _prevFilteredR;
             _prevFilteredL = filteredL;

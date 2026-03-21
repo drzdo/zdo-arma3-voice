@@ -142,7 +142,9 @@ public class IntentParser
               - Team numbers map to colors: group/team 1 = "red", 2 = "green", 3 = "blue", 4 = "yellow".
               - If the player says "second"/"второй"/"третий"/ordinal, use the squad # number above. "Second"/"второй" = #2, "third"/"третий" = #3, etc. Return that unit's netId.
               - If the player says a name, find it and return its netId.
-              - Default to ["all"] if not specified.
+              - If the player explicitly says "all"/"everyone"/"squad"/"все", return ["all"].
+              - If the player does NOT mention who should execute (no name, no number, no team), return ["last"] — the server will use the previously addressed units.
+              - Only default to ["all"] if it's the very first command or the player clearly means everyone.
 
             location (optional, object): WHERE.
               type="look_target" — "there","that position","here".

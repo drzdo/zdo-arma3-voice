@@ -112,8 +112,9 @@ public class DialogueManager
         float dz = npcPos.Length > 2 && playerPos.Length > 2 ? npcPos[2] - playerPos[2] : 0f;
         float distance = MathF.Sqrt(dx * dx + dy * dy + dz * dz);
 
-        // 5. If far → apply radio effect to the mono samples first
-        if (distance >= RadioDistanceThreshold)
+        // 5. If far → apply radio effect (no distance attenuation in spatial)
+        var isRadio = distance >= RadioDistanceThreshold;
+        if (isRadio)
         {
             Log.Info("DialogueManager", $"Radio effect (distance: {distance:F1}m)");
             samples = _radioEffect.ApplyRadioEffect(samples, sampleRate);
@@ -123,9 +124,9 @@ public class DialogueManager
             Log.Info("DialogueManager", $"Spatial only (distance: {distance:F1}m)");
         }
 
-        // 6. Always play through real-time spatial provider
+        // 6. Play through spatial provider (radio=full volume, spatial=distance attenuated)
         var spatialProvider = new SpatialSampleProvider(
-            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry);
+            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, isRadio);
 
         _audioPlayer.Play(spatialProvider);
 

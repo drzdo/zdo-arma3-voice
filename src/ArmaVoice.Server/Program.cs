@@ -178,7 +178,7 @@ public class Program
                         Log.Info("Mic", $"Transcript: \"{transcript}\"");
 
                         // Show transcript in Arma chat + RPT
-                        rpcClient.Fire($"systemChat 'Voice: {transcript.Replace("'", "")}'");
+                        rpcClient.Fire($"systemChat format ['%1: {transcript.Replace("'", "")}', name player]");
                         rpcClient.Fire($"diag_log 'ArmaVoice transcript: {transcript.Replace("'", "")}'");
 
                         var units = unitRegistry.GetAllUnits()

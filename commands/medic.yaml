@@ -1,0 +1,4 @@
+id: medic
+description: "Request a medic via ACE3. Triggers: 'medic!', 'need a medic', 'request medic', 'медик!', 'нужен медик'. If player requests for themselves ('I need a medic'), set units to []. If for someone else ('medic for second'), set units to that unit's netId."
+sqf: |
+  [_units] call zdoArmaMic_fnc_requestMedic;

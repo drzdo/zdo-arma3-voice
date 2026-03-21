@@ -15,6 +15,7 @@ public class CommandExecutor
     private readonly CommandRegistry _commandRegistry;
     private readonly DialogueManager? _dialogueManager;
     private readonly ILlmClient _llm;
+    private List<string> _lastUnits = [];
 
     public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState,
         CommandRegistry commandRegistry, DialogueManager? dialogueManager, ILlmClient llm)
@@ -55,10 +56,19 @@ public class CommandExecutor
             return;
         }
 
-        // Resolve standard params
+        // Resolve units — "last" means reuse previous target
         var netIds = await ResolveUnitsAsync(intent.Units);
+        if (intent.Units is ["last"] && _lastUnits.Count > 0)
+        {
+            netIds = _lastUnits;
+            Log.Info("Cmd", $"Using last units: [{string.Join(",", netIds)}]");
+        }
+        else if (netIds.Count > 0 && intent.Units is not ["last"])
+        {
+            _lastUnits = netIds;
+        }
         var targetNetId = ResolveUnitRef(intent.Target) ?? "";
-        var position = await ResolveLocationAsync(intent.Location, lookTarget);
+        var position = await ResolveLocationAsync(intent.Location, lookTarget, netIds);
         var stance = intent.Stance ?? "";
         var speed = intent.Speed ?? "";
         var formation = intent.Formation ?? "";
@@ -88,6 +98,9 @@ public class CommandExecutor
         var result = new List<string>();
         foreach (var r in refs)
         {
+            if (r.Equals("last", StringComparison.OrdinalIgnoreCase))
+                return []; // handled by caller
+
             if (r.Equals("all", StringComparison.OrdinalIgnoreCase))
             {
                 return _unitRegistry.GetAllUnits()
@@ -142,16 +155,59 @@ public class CommandExecutor
 
     // ── Location resolution ──────────────────────────────
 
-    private async Task<float[]> ResolveLocationAsync(LocationParsed? loc, float[] lookTarget)
+    private async Task<float[]> ResolveLocationAsync(LocationParsed? loc, float[] lookTarget, List<string> unitNetIds)
     {
         if (loc == null || loc.Type == "look_target") return lookTarget;
+
         if (loc.Type == "relative" && loc.Distance.HasValue && !string.IsNullOrEmpty(loc.Direction))
-            return ComputeRelative(loc.Distance.Value, loc.Direction);
+        {
+            var playerPos = _gameState.PlayerPos;
+            var targetPos = ComputeRelative(loc.Distance.Value, loc.Direction, playerPos);
+
+            // If units are already near the target (<2m), compute from unit centroid instead
+            var centroid = GetUnitCentroid(unitNetIds);
+            if (centroid != null)
+            {
+                float dx = centroid[0] - targetPos[0];
+                float dy = centroid[1] - targetPos[1];
+                float dist = MathF.Sqrt(dx * dx + dy * dy);
+                if (dist < 2f)
+                {
+                    targetPos = ComputeRelative(loc.Distance.Value, loc.Direction, centroid);
+                    Log.Info("Cmd", "Relative from unit position (already near target)");
+                }
+            }
+
+            return targetPos;
+        }
+
         if (loc.Type == "azimuth" && loc.Distance.HasValue && loc.Azimuth.HasValue)
             return ComputeAzimuth(loc.Distance.Value, loc.Azimuth.Value);
         if (loc.Type == "marker" && !string.IsNullOrEmpty(loc.Marker))
             return await ResolveMarkerAsync(loc.Marker) ?? lookTarget;
         return lookTarget;
+    }
+
+    private float[]? GetUnitCentroid(List<string> netIds)
+    {
+        if (netIds.Count == 0) return null;
+
+        float sumX = 0, sumY = 0, sumZ = 0;
+        int count = 0;
+        foreach (var netId in netIds)
+        {
+            var unit = _unitRegistry.GetUnit(netId);
+            if (unit != null)
+            {
+                sumX += unit.Position[0];
+                sumY += unit.Position[1];
+                sumZ += unit.Position.Length > 2 ? unit.Position[2] : 0;
+                count++;
+            }
+        }
+
+        if (count == 0) return null;
+        return [sumX / count, sumY / count, sumZ / count];
     }
 
     private async Task<float[]?> ResolveMarkerAsync(string playerQuery)
@@ -210,9 +266,9 @@ public class CommandExecutor
         }
     }
 
-    private float[] ComputeRelative(float distance, string direction)
+    private float[] ComputeRelative(float distance, string direction, float[]? fromPos = null)
     {
-        var pos = _gameState.PlayerPos;
+        var pos = fromPos ?? _gameState.PlayerPos;
         var playerDir = _gameState.PlayerDir * MathF.PI / 180f;
         float bearing = direction.ToLowerInvariant() switch
         {
