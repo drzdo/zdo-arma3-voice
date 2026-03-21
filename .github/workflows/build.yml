@@ -33,8 +33,30 @@ jobs:
       - name: Publish Extension (NativeAOT)
         run: dotnet publish src/ArmaVoice.Extension -c Release -r win-x64 -o publish/extension
 
-      - name: Publish Server
-        run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 --self-contained -o publish/server
+      - name: Publish Server (NativeAOT single exe)
+        run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
+
+      - name: Download HEMTT
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/BrettMayson/HEMTT/releases/latest/download/hemtt-windows-x64.exe" -OutFile "hemtt.exe"
+
+      - name: Pack PBO
+        shell: pwsh
+        run: |
+          # HEMTT expects addons/ at project root + .hemtt/project.toml
+          New-Item -ItemType Directory -Force -Path hemtt_build/.hemtt | Out-Null
+          Copy-Item -Recurse mod/addons hemtt_build/addons
+          Set-Content hemtt_build/.hemtt/project.toml @"
+          [project]
+          name = "arma3_mic"
+          prefix = "arma3_mic"
+          author = "ArmaVoice"
+          "@
+          Push-Location hemtt_build
+          ../hemtt.exe build
+          Pop-Location
+          Copy-Item hemtt_build/.hemttout/build/addons/arma3_mic.pbo publish/arma3_mic.pbo
 
       - name: Upload Extension DLL
         uses: actions/upload-artifact@v4
@@ -42,8 +64,14 @@ jobs:
           name: arma3-mic-extension
           path: publish/extension/arma3_mic_x64.dll
 
+      - name: Upload PBO
+        uses: actions/upload-artifact@v4
+        with:
+          name: arma3-mic-pbo
+          path: publish/arma3_mic.pbo
+
       - name: Upload Server
         uses: actions/upload-artifact@v4
         with:
           name: arma3-mic-server
-          path: publish/server/
+          path: publish/server/ArmaVoice.Server.exe
