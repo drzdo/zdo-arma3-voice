@@ -9,7 +9,7 @@ private _reports = [];
         _report = _name + " is dead.";
     } else {
         if (isClass (configFile >> "CfgPatches" >> "ace_medical")) then {
-            // ACE3 medical
+            /* ACE3 medical */
             private _wounds = _u getVariable ["ace_medical_openWounds", []];
             private _pain = _u getVariable ["ace_medical_pain", 0];
             private _bleeding = _u getVariable ["ace_medical_isBleeding", false];
@@ -34,7 +34,7 @@ private _reports = [];
                 _report = _name + ": " + (_parts joinString ", ") + ".";
             };
         } else {
-            // Vanilla
+            /* Vanilla */
             private _dmg = damage _u;
             if (_dmg < 0.01) then {
                 _report = _name + " is fine.";

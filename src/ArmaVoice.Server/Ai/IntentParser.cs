@@ -72,6 +72,7 @@ public class UnitSummary
     public string Side { get; set; } = "";
     public bool SameGroup { get; set; }
     public string UnitType { get; set; } = "";
+    public int SquadNumber { get; set; }
 }
 
 // ── Source-generated JSON context (trim/AOT safe) ────────
@@ -108,8 +109,8 @@ public class IntentParser
         var squadMembers = knownUnits.Where(u => u.SameGroup).ToList();
         var others = knownUnits.Where(u => !u.SameGroup).ToList();
 
-        var squadContext = string.Join("\n", squadMembers.Select((u, i) =>
-            $"  #{i + 1} netId=\"{u.NetId}\" name=\"{u.Name}\" type={u.UnitType}"));
+        var squadContext = string.Join("\n", squadMembers.Select(u =>
+            $"  #{u.SquadNumber} netId=\"{u.NetId}\" name=\"{u.Name}\" type={u.UnitType}"));
 
         var othersContext = others.Count > 0
             ? "\n  Other units nearby:\n" + string.Join("\n", others.Select(u =>

@@ -1,0 +1,4 @@
+id: lookat
+description: "Make units look at a position or direction. Triggers: 'look there', 'look at that', 'посмотри туда', 'глянь'. If a cardinal direction like 'look south', use location type=relative distance=100."
+sqf: |
+  [_units, _pos] call zdoArmaMic_fnc_lookAt;

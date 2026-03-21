@@ -10,6 +10,8 @@ public class UnitInfo
     public bool SameGroup { get; set; }
     public string UnitType { get; set; } = "";
     public int Rank { get; set; }
+    /// <summary>Squad number as shown in-game (1-based, player=#1).</summary>
+    public int SquadNumber { get; set; }
     public float[] Position { get; set; } = [0, 0, 0];
     public int LastSeenFrame { get; set; }
     public bool InfoLoaded { get; set; }
@@ -179,6 +181,9 @@ public class UnitRegistry
                     {
                         info.Position = [posEl[0].GetSingle(), posEl[1].GetSingle(), posEl[2].GetSingle()];
                     }
+
+                    if (unit.GetArrayLength() >= 8 && unit[7].TryGetInt32(out var sq))
+                        info.SquadNumber = sq;
 
                     info.InfoLoaded = true;
                     info.LastSeenFrame = _frameCounter;

@@ -190,7 +190,8 @@ public class Program
                                 Name = u.Name,
                                 Side = u.Side,
                                 SameGroup = u.SameGroup,
-                                UnitType = u.UnitType
+                                UnitType = u.UnitType,
+                                SquadNumber = u.SquadNumber
                             })
                             .ToList();
 
