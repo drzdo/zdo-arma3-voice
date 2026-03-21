@@ -19,6 +19,8 @@ public class CommandExecutor
     private readonly float _ackChance;
     private readonly Random _rng = new();
     private List<string> _lastUnits = [];
+    /// <summary>Player-assigned names → netId. E.g. "alpha" → "0:15" (a vehicle).</summary>
+    private readonly Dictionary<string, string> _namedObjects = new(StringComparer.OrdinalIgnoreCase);
 
     public CommandExecutor(RpcClient rpc, UnitRegistry unitRegistry, GameState gameState,
         CommandRegistry commandRegistry, DialogueManager? dialogueManager, ILlmClient llm,
@@ -38,7 +40,7 @@ public class CommandExecutor
     {
         var actionId = intent.Action.ToLowerInvariant();
 
-        // Dialogue is special — handled by DialogueManager, not SQF
+        // Dialogue — handled by DialogueManager
         if (actionId == "dialogue")
         {
             if (_dialogueManager == null) { LogCmd("Dialogue", "disabled"); return; }
@@ -46,6 +48,88 @@ public class CommandExecutor
             if (npcNetId == null) { LogCmd("Dialogue", $"target \"{intent.Target}\" not found."); return; }
             _dialogueManager.Enqueue(npcNetId, intent.Text ?? "");
             LogCmd("Dialogue", $"queued → {npcNetId}");
+            return;
+        }
+
+        // Mark — create a map marker at look target
+        if (actionId == "mark")
+        {
+            var label = (intent.Text ?? "Mark").Replace("'", "");
+            var markPos = FmtPos(lookTarget);
+            _rpc.Fire($"[{markPos}, '{label}'] call zdoArmaMic_fnc_createMarker");
+            LogCmd("Mark", $"\"{label}\" at {markPos}");
+            return;
+        }
+
+        // Sitrep hostiles — fetch data, let LLM compose a natural report, play via TTS
+        if (actionId == "sitrep_hostiles")
+        {
+            var sitrepUnits = await ResolveUnitsAsync(intent.Units);
+            if (sitrepUnits.Count == 0) { LogCmd("SitrepHostiles", "no units"); return; }
+            if (_dialogueManager == null) { LogCmd("SitrepHostiles", "dialogue disabled"); return; }
+
+            var reporterNetId = sitrepUnits[0];
+            var reporter = _unitRegistry.GetUnit(reporterNetId);
+            var reporterName = reporter?.Name ?? "Soldier";
+
+            try
+            {
+                var sitrepArr = string.Join(",", sitrepUnits.Select(id => $"'{id}'"));
+                var hostilesJson = await _rpc.CallAsync($"[[{sitrepArr}]] call zdoArmaMic_fnc_reportHostiles");
+
+                // Send hostiles data to dialogue manager as a special report prompt
+                var prompt = $"[SITREP] You are {reporterName}. Report these known hostile contacts to the commander in a brief, natural military radio style. "
+                    + $"Data (format: [type, side, distance_m, absolute_bearing, relative_bearing_from_you]): {hostilesJson}. "
+                    + "If the list is empty, say you don't see any hostiles. Be concise — 1-3 sentences. Use relative directions (ahead, left, right, behind) when helpful.";
+
+                _dialogueManager.Enqueue(reporterNetId, prompt);
+                LogCmd("SitrepHostiles", $"queued report from {reporterName}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Cmd", $"Sitrep hostiles failed: {ex.Message}");
+            }
+            return;
+        }
+
+        // Sitrep position — unit reports where they are relative to player
+        if (actionId == "sitrep_position")
+        {
+            var posUnits = await ResolveUnitsAsync(intent.Units);
+            if (posUnits.Count == 0) { LogCmd("SitrepPos", "no units"); return; }
+            if (_dialogueManager == null) { LogCmd("SitrepPos", "dialogue disabled"); return; }
+
+            var reporterNetId = posUnits[0];
+            try
+            {
+                var posArr = string.Join(",", posUnits.Select(id => $"'{id}'"));
+                var posDataJson = await _rpc.CallAsync($"[[{posArr}]] call zdoArmaMic_fnc_getUnitPosition");
+                var prompt = $"[POSITION REPORT] Report your position to the player. Player is {_gameState.PlayerRank} {_gameState.PlayerName}. "
+                    + $"Data (format: [unitName, distance_m, bearing_degrees]): {posDataJson}. "
+                    + "Be brief and natural, use relative directions. Address the player by rank.";
+                _dialogueManager.Enqueue(reporterNetId, prompt);
+                LogCmd("SitrepPos", $"queued from {reporterNetId}");
+            }
+            catch (Exception ex) { Log.Error("Cmd", $"Sitrep position failed: {ex.Message}"); }
+            return;
+        }
+
+        // Name — assign a label to the object at look target
+        if (actionId == "name")
+        {
+            var label = intent.Text ?? "";
+            if (string.IsNullOrWhiteSpace(label)) { LogCmd("Name", "no name specified"); return; }
+            try
+            {
+                var namePos = FmtPos(lookTarget);
+                var netId = await _rpc.CallAsync($"[{namePos}] call zdoArmaMic_fnc_getObjectAt");
+                netId = netId.Trim('"');
+                if (string.IsNullOrEmpty(netId)) { LogCmd("Name", "no object at look target"); return; }
+                _namedObjects[label] = netId;
+                LogCmd("Name", $"\"{label}\" → {netId}");
+                _rpc.Fire($"systemChat format ['Named object: %1 → %2', '{label.Replace("'", "")}', '{netId}']");
+            }
+            catch (Exception ex) { Log.Error("Cmd", $"Name failed: {ex.Message}"); }
             return;
         }
 
@@ -105,7 +189,7 @@ public class CommandExecutor
             if (ackUnit != null && !string.IsNullOrEmpty(ackUnit.Name))
             {
                 _ackDialogue.Enqueue(ackNetId,
-                    $"[ACK] The player just gave you a '{actionId}' command. Respond with a very short military acknowledgment (1 sentence max). Address the player by their role (e.g. 'командир', 'command'). Examples: 'Так точно!', 'Roger that!', 'Принял, командир!', 'Copy, moving out.'");
+                    $"[ACK] The player ({_gameState.PlayerRank} {_gameState.PlayerName}) just gave you a '{actionId}' command. Respond with a very short military acknowledgment (1 sentence max). Address the player by rank. Examples: 'Так точно, сержант!', 'Есть, товарищ сержант!', 'Принял, {_gameState.PlayerRank}!', 'Roger that, sergeant!'");
                 Log.Info("Cmd", $"Ack from {ackUnit.Name}");
             }
         }
@@ -205,6 +289,8 @@ public class CommandExecutor
             return ComputeAzimuth(loc.Distance.Value, loc.Azimuth.Value);
         if (loc.Type == "marker" && !string.IsNullOrEmpty(loc.Marker))
             return await ResolveMarkerAsync(loc.Marker) ?? lookTarget;
+        if (loc.Type == "named" && !string.IsNullOrEmpty(loc.Marker))
+            return await ResolveNamedObjectPosAsync(loc.Marker) ?? lookTarget;
         return lookTarget;
     }
 
@@ -284,6 +370,26 @@ public class CommandExecutor
             Log.Error("Cmd", $"Marker resolve failed: {ex.Message}");
             return null;
         }
+    }
+
+    private async Task<float[]?> ResolveNamedObjectPosAsync(string name)
+    {
+        if (!_namedObjects.TryGetValue(name, out var netId))
+        {
+            Log.Warn("Cmd", $"Named object '{name}' not found in memory");
+            return null;
+        }
+
+        try
+        {
+            var result = await _rpc.CallAsync($"getPosASL ('{netId}' call BIS_fnc_objectFromNetId)");
+            using var doc = System.Text.Json.JsonDocument.Parse(result);
+            var arr = doc.RootElement;
+            if (arr.ValueKind == System.Text.Json.JsonValueKind.Array && arr.GetArrayLength() >= 2)
+                return [arr[0].GetSingle(), arr[1].GetSingle(), arr.GetArrayLength() >= 3 ? arr[2].GetSingle() : 0f];
+        }
+        catch (Exception ex) { Log.Error("Cmd", $"Named object pos failed: {ex.Message}"); }
+        return null;
     }
 
     private float[] ComputeRelative(float distance, string direction, float[]? fromPos = null)

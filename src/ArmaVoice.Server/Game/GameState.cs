@@ -6,6 +6,8 @@ public class GameState
 {
     public float[] PlayerPos { get; set; } = [0, 0, 0];
     public float PlayerDir { get; set; }
+    public string PlayerName { get; set; } = "";
+    public string PlayerRank { get; set; } = "";
     public List<(string NetId, float[] Pos)> NearbyUnits { get; } = new();
 
     /// <summary>

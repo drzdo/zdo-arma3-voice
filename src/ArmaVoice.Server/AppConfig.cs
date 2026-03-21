@@ -56,8 +56,17 @@ public class AppConfig
             case "windows":
                 RequireField(errors, Stt.Windows.Language, "stt.windows.language");
                 break;
+            case "google":
+                RequireField(errors, Stt.Google.ApiKey, "stt.google.api_key");
+                RequireField(errors, Stt.Google.Language, "stt.google.language");
+                break;
+            case "azure":
+                RequireField(errors, Stt.Azure.SubscriptionKey, "stt.azure.subscription_key");
+                RequireField(errors, Stt.Azure.Region, "stt.azure.region");
+                RequireField(errors, Stt.Azure.Language, "stt.azure.language");
+                break;
             default:
-                errors.Add($"Unknown stt.system: \"{Stt.System}\". Must be \"whisper\", \"deepgram\", or \"windows\".");
+                errors.Add($"Unknown stt.system: \"{Stt.System}\". Must be \"whisper\", \"deepgram\", \"windows\", \"google\", or \"azure\".");
                 break;
         }
 
@@ -137,6 +146,21 @@ public class SttConfig
     public WhisperConfig Whisper { get; set; } = new();
     public DeepgramConfig Deepgram { get; set; } = new();
     public WindowsSttConfig Windows { get; set; } = new();
+    public GoogleSttConfig Google { get; set; } = new();
+    public AzureSttConfig Azure { get; set; } = new();
+}
+
+public class GoogleSttConfig
+{
+    public string ApiKey { get; set; } = "";
+    public string Language { get; set; } = "ru-RU";
+}
+
+public class AzureSttConfig
+{
+    public string SubscriptionKey { get; set; } = "";
+    public string Region { get; set; } = "";
+    public string Language { get; set; } = "ru-RU";
 }
 
 public class WindowsSttConfig

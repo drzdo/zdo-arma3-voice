@@ -25,13 +25,16 @@ public class NpcDialogue
         string npcSide,
         string playerText,
         List<UnitSummary> nearbyUnits,
-        string npcNetId)
+        string npcNetId,
+        string playerName = "",
+        string playerRank = "")
     {
         var nearbyContext = string.Join("\n", nearbyUnits.Select(u =>
             $"- {u.Name} ({u.UnitType}, {u.Side}{(u.SameGroup ? ", same group" : "")})"));
 
         var systemPrompt = $"""
             You are {npcName}, a military NPC in Arma 3. Stay in character at all times.
+            The player commanding you is {playerRank} {playerName}. Address them by rank when appropriate (e.g. "сержант", "командир", "товарищ сержант").
 
             Your details:
             - Name: {npcName}

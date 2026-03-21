@@ -1,0 +1,4 @@
+id: garrison
+description: "Order units to garrison/enter the nearest building at look target position. Units spread across available building positions. Triggers: 'garrison that building', 'enter the building', 'в здание', 'занять здание', 'рассредоточиться по зданию'."
+sqf: |
+  [_units, _pos] call zdoArmaMic_fnc_garrison;

@@ -64,6 +64,8 @@ public class Program
                 #pragma warning disable CA1416
                 "windows" => new WindowsRecognizer(config.Stt.Windows.Language),
                 #pragma warning restore CA1416
+                "google" => new GoogleRecognizer(config.Stt.Google.ApiKey, config.Stt.Google.Language),
+                "azure" => new AzureRecognizer(config.Stt.Azure.SubscriptionKey, config.Stt.Azure.Region, config.Stt.Azure.Language),
                 _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath),
             };
             Log.Info("Server", $"STT ({config.Stt.System}) ready.");
@@ -232,6 +234,22 @@ public class Program
                     catch { }
                 }
                 await unitRegistry.SyncSquadAsync();
+
+                // Fetch player name/rank
+                try
+                {
+                    var playerInfoJson = await rpcClient.CallAsync("call zdoArmaMic_fnc_getPlayerInfo");
+                    using var piDoc = System.Text.Json.JsonDocument.Parse(playerInfoJson);
+                    var pi = piDoc.RootElement;
+                    if (pi.ValueKind == System.Text.Json.JsonValueKind.Array && pi.GetArrayLength() >= 2)
+                    {
+                        gameState.PlayerName = pi[0].GetString() ?? "";
+                        gameState.PlayerRank = pi[1].GetString() ?? "";
+                        Log.Info("Server", $"Player: {gameState.PlayerRank} {gameState.PlayerName}");
+                    }
+                }
+                catch (Exception ex) { Log.Warn("Server", $"Player info failed: {ex.Message}"); }
+
                 await commandRegistry.CheckEnableConditionsAsync(rpcClient);
 
                 // Rebuild prompt with only enabled commands

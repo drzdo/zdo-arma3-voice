@@ -1,0 +1,3 @@
+id: sitrep_hostiles
+description: "Report known hostile contacts. The unit reports enemies they're aware of with type, distance, and direction in a natural voice via TTS. Triggers: 'report contacts', 'any hostiles?', 'what do you see', 'враги?', 'доложи обстановку', 'кого видишь'."
+sqf: ""

@@ -1,0 +1,4 @@
+id: behaviour
+description: "Set unit behaviour/combat mode. LLM must set 'formation' field to one of: STEALTH (скрытно), AWARE (на чеку/осторожно), COMBAT (бой/к бою), SAFE (вольно/расслабиться). Triggers: 'go stealth', 'combat mode', 'stay alert', 'скрытно', 'к бою', 'вольно'."
+sqf: |
+  [_units, _formation] call zdoArmaMic_fnc_setBehaviour;

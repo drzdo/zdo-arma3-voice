@@ -23,6 +23,13 @@ stt:
     sample_rate: 16000
   windows:
     language: en-US  # BCP-47 locale: en-US, ru-RU, uk-UA, etc.
+  google:
+    api_key: YOUR_GOOGLE_API_KEY
+    language: ru-RU
+  azure:
+    subscription_key: YOUR_AZURE_KEY
+    region: eastus  # Azure region
+    language: ru-RU
 
 tts:
   system: piper  # piper | elevenlabs

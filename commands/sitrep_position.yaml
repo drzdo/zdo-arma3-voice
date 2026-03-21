@@ -1,0 +1,3 @@
+id: sitrep_position
+description: "Report unit's position relative to the player. Triggers: 'where are you', 'report position', 'где ты', 'доложи позицию'. Unit responds with distance and direction from the player via TTS."
+sqf: ""

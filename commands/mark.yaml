@@ -1,0 +1,3 @@
+id: mark
+description: "Create a map marker at the look target position. LLM must set 'text' to the marker label. Triggers: 'mark this position', 'mark as Bravo', 'отметь на карте', 'поставь маркер Альфа'. If no label specified, set text to 'Mark'."
+sqf: ""

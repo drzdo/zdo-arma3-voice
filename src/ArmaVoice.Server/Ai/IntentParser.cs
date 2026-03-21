@@ -158,7 +158,8 @@ public class IntentParser
               type="relative" + distance (meters) + direction ("forward","back","left","right","north","south","east","west")
                 "go south" or "watch south" with no distance = use distance=100.
               type="azimuth" + distance (meters) + azimuth (degrees 0-360)
-              type="marker" + marker (string) — "go to marker Alpha" / "двигай к маркеру Альфа". Server will resolve marker position via SQF.
+              type="marker" + marker (string) — "go to marker Alpha" / "двигай к маркеру Альфа". Server resolves marker position via SQF.
+              type="named" + marker (string) — reference a previously named object. "go to vehicle Alpha" / "к машине Альфа". Only if player previously named something.
 
             target (optional, string): target unit netId or name.
             text (optional, string): for dialogue — what the player said.

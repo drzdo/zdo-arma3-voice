@@ -93,7 +93,8 @@ public class DialogueManager
 
         // 1. LLM response
         var responseText = await _npcDialogue.GenerateResponseAsync(
-            npcName, npcRole, npcSide, request.PlayerText, nearbyUnits, request.TargetNetId);
+            npcName, npcRole, npcSide, request.PlayerText, nearbyUnits, request.TargetNetId,
+            _gameState.PlayerName, _gameState.PlayerRank);
         ct.ThrowIfCancellationRequested();
 
         // 2. TTS
