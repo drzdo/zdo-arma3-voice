@@ -1,12 +1,16 @@
 id: getin
-description: "Get in the vehicle the player is looking at. Triggers: 'get in', 'mount up', 'садись', 'в машину', 'загружайтесь'."
+description: "Get in the vehicle the player is looking at. Optionally specify role via 'formation' field: 'driver', 'gunner', 'commander', 'cargo'. Default is cargo. Triggers: 'get in', 'mount up', 'садись', 'в машину', 'get in as driver', 'садись за руль', 'на место стрелка'."
 sqf: |
   private _veh = [_pos] call zdoArmaMic_fnc_findVehicleAt;
-  diag_log format ["ArmaVoice getin: pos=%1 veh=%2 isNull=%3 units=%4", _pos, _veh, isNull _veh, _units];
   if (isNull _veh) exitWith { systemChat "No vehicle found" };
+  private _role = if (_formation != "") then { toLower _formation } else { "cargo" };
   {
       private _u = _x call BIS_fnc_objectFromNetId;
-      diag_log format ["ArmaVoice getin: unit=%1 isNull=%2", _u, isNull _u];
-      _u assignAsCargo _veh;
+      switch (_role) do {
+          case "driver": { _u assignAsDriver _veh };
+          case "gunner": { _u assignAsGunner _veh };
+          case "commander": { _u assignAsCommander _veh };
+          default { _u assignAsCargo _veh };
+      };
       [_u] orderGetIn true;
   } forEach _units;
