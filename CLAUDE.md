@@ -10,7 +10,7 @@ Full design: `doc/DESIGN-v1.md`
 
 - **ArmaVoice.Extension** (`src/ArmaVoice.Extension/`) — NativeAOT C# DLL loaded by Arma 3 via `callExtension`. TCP client to server. Must compile on Windows (`win-x64`).
 - **ArmaVoice.Server** (`src/ArmaVoice.Server/`) — Console app. TCP listener, speech pipeline, AI, audio. All config from `config.yaml`.
-- **Mod SQF** (`mod/addons/arma3_mic/`) — ~80 lines total. CBA settings, PTT keybind, EachFrame handler, reconnect loop.
+- **Mod SQF** (`addons/arma3_mic/`) — ~80 lines total. CBA settings, PTT keybind, EachFrame handler, reconnect loop.
 
 ## Build
 

@@ -31,7 +31,7 @@ jobs:
       - name: Publish Extension (NativeAOT)
         run: dotnet publish src/ArmaVoice.Extension -c Release -r win-x64 -o publish/extension
 
-      - name: Publish Server (NativeAOT single exe)
+      - name: Publish Server (single exe)
         run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
 
       - name: Download HEMTT
@@ -43,14 +43,7 @@ jobs:
           Copy-Item hemtt_bin/hemtt.exe hemtt.exe
 
       - name: Pack PBO
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path hemtt_build/.hemtt | Out-Null
-          Copy-Item -Recurse mod/addons hemtt_build/addons
-          "[project]`nname = `"arma3_mic`"`nprefix = `"arma3_mic`"`nauthor = `"ArmaVoice`"" | Set-Content hemtt_build/.hemtt/project.toml -Encoding utf8
-          Push-Location hemtt_build
-          ../hemtt.exe build
-          Pop-Location
+        run: ./hemtt.exe build
 
       # Package the Arma 3 mod folder with extension DLL + packed PBO
       - name: Package mod
@@ -58,7 +51,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path package/@arma3_mic/addons
           Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
-          Copy-Item hemtt_build/.hemttout/build/addons/arma3_mic.pbo package/@arma3_mic/addons/
+          Copy-Item .hemttout/build/addons/arma3_mic.pbo package/@arma3_mic/addons/
           Compress-Archive -Path package/@arma3_mic -DestinationPath package/arma3_mic_mod.zip
 
       - name: Create Release
