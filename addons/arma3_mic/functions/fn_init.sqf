@@ -30,6 +30,15 @@ arma3_mic_frameCount = 0;
 [0xC7, [false, false, false]]] call CBA_fnc_addKeybind;
 // Default: Home key, no modifiers
 
+// Check if extension is loaded
+private _ver = "arma3_mic" callExtension "version";
+if (_ver == "") then {
+    diag_log "ArmaVoice: ERROR — extension arma3_mic_x64.dll not loaded!";
+    systemChat "ArmaVoice: extension NOT loaded — check that arma3_mic_x64.dll is in the mod folder";
+} else {
+    diag_log format ["ArmaVoice: extension loaded, version %1", _ver];
+};
+
 // Per-frame handler — state push + RPC poll
 addMissionEventHandler ["EachFrame", {
     // Skip if not connected
@@ -48,7 +57,8 @@ addMissionEventHandler ["EachFrame", {
         private _units = _nearby apply {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
-        "arma3_mic" callExtension ["state", (str [_pos, _dir, _units])];
+        private _stateStr = str [_pos, _dir, _units];
+        "arma3_mic" callExtension ["state", _stateStr];
     };
 
     // Poll for inbound RPC (every frame)
