@@ -81,7 +81,6 @@ public class Program
 
         // Audio
         var audioPlayer = new AudioPlayer();
-        var spatialMixer = new SpatialMixer();
         var radioEffect = new RadioEffect();
 
         // LLM clients
@@ -103,7 +102,7 @@ public class Program
 
         // Dialogue manager
         var dialogueManager = new DialogueManager(
-            npcDialogue, tts, audioPlayer, spatialMixer, radioEffect, gameState, unitRegistry);
+            npcDialogue, tts, audioPlayer, radioEffect, gameState, unitRegistry);
 
         // Command executor
         var commandExecutor = new CommandExecutor(rpcClient, unitRegistry, gameState, dialogueManager);

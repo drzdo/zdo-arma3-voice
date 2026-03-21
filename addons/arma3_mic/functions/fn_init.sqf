@@ -48,7 +48,7 @@ addMissionEventHandler ["EachFrame", {
         private _units = _nearby apply {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
-        "arma3_mic" callExtension ["state", str [_pos, _dir, _units]];
+        "arma3_mic" callExtension ["state", (str [_pos, _dir, _units])];
     };
 
     // Poll for inbound RPC (every frame)
