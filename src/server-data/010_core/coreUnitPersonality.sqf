@@ -1,4 +1,4 @@
-zdoArmaVoice_fnc_unitPersonality = {
+zdoArmaVoice_fnc_coreUnitPersonality = {
     params ["_netId"];
     private _unit = _netId call BIS_fnc_objectFromNetId;
     private _side = str side _unit;
