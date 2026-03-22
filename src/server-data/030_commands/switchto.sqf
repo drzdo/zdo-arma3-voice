@@ -6,7 +6,6 @@ zdoArmaVoice_fnc_commandSwitchto = {
     if (isNull _target || !alive _target) exitWith { systemChat "Unit not found or dead" };
     zdoArmaVoice_originalUnit = player;
     doStop player;
-    _target disableAI "FSM";
     selectPlayer _target;
     systemChat format ["Switched to %1", name _target]
 };

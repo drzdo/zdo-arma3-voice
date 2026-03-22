@@ -8,6 +8,8 @@ zdoArmaVoice_fnc_coreResolveToWhom = {
             private _idx = _x - 1;
             if (_idx >= 0 && _idx < count _allSquad) then {
                 _result pushBack ((_allSquad select _idx) call BIS_fnc_netId)
+            } else {
+                diag_log format ["ArmaVoice: squad index %1 out of bounds (squad size %2)", _x, count _allSquad]
             }
         } else {
             if (_x isEqualType "" && {_x == "all"}) then {

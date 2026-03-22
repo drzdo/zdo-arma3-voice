@@ -3,7 +3,6 @@ zdoArmaVoice_fnc_commandSwitchback = {
     if (isNull zdoArmaVoice_originalUnit) exitWith {};
     private _current = player;
     private _original = zdoArmaVoice_originalUnit;
-    _current enableAI "FSM";
     selectPlayer _original;
     zdoArmaVoice_originalUnit = objNull;
     systemChat format ["Switched back to %1", name _original]

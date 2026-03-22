@@ -7,6 +7,7 @@ zdoArmaVoice_fnc_commandGetin = {
     {
         private _u = _x call BIS_fnc_objectFromNetId;
         if (_u distance _veh < 7) then {
+            if (vehicle _u == _veh) then { moveOut _u };
             switch (_role) do {
                 case "driver": { _u moveInDriver _veh };
                 case "gunner": { _u moveInGunner _veh };
