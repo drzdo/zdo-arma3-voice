@@ -70,7 +70,8 @@ jobs:
       - name: Setup HEMTT addons symlink
         shell: pwsh
         run: |
-          New-Item -ItemType Junction -Path addons/zdo_arma_voice -Target src/arma-mod -Force | Out-Null
+          New-Item -ItemType Directory -Force -Path addons | Out-Null
+          New-Item -ItemType Junction -Path addons/zdo_arma_voice -Target (Resolve-Path src/arma-mod).Path | Out-Null
 
       - name: Download HEMTT
         shell: pwsh

@@ -176,7 +176,7 @@ public class Program
                         Log.Info("Mic", $"Transcript: \"{transcript}\"");
 
                         // Show transcript in Arma chat
-                        rpcClient.Fire($"systemChat format ['%1: {transcript.Replace("'", "")}', name player]");
+                        rpcClient.Fire($"[\"{transcript.Replace("\"", "\"\"")}\"] call zdoArmaVoice_fnc_coreOnPlayerSay");
 
                         // Parse intent via SQF prompt + LLM
                         var result = await intentParser.ParseAsync(transcript);
@@ -210,7 +210,7 @@ public class Program
                     await Task.Delay(1000);
                     try
                     {
-                        var test = await rpcClient.CallAsync("!isNil 'zdoZdoArmaVoice_fnc_coreCallCommand'");
+                        var test = await rpcClient.CallAsync("!isNil 'zdoArmaVoice_fnc_coreCallCommand'");
                         if (test == "true") break;
                         Log.Info("Server", "Waiting for SQF data files to load...");
                     }
@@ -218,20 +218,6 @@ public class Program
                 }
                 await unitRegistry.SyncSquadAsync();
 
-                // Fetch player name/rank
-                try
-                {
-                    var playerInfoJson = await rpcClient.CallAsync("call zdoZdoArmaVoice_fnc_getPlayerInfo");
-                    using var piDoc = System.Text.Json.JsonDocument.Parse(playerInfoJson);
-                    var pi = piDoc.RootElement;
-                    if (pi.ValueKind == System.Text.Json.JsonValueKind.Array && pi.GetArrayLength() >= 2)
-                    {
-                        gameState.PlayerName = pi[0].GetString() ?? "";
-                        gameState.PlayerRank = pi[1].GetString() ?? "";
-                        Log.Info("Server", $"Player: {gameState.PlayerRank} {gameState.PlayerName}");
-                    }
-                }
-                catch (Exception ex) { Log.Warn("Server", $"Player info failed: {ex.Message}"); }
             });
         };
 

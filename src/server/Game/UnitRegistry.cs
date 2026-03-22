@@ -138,7 +138,7 @@ public class UnitRegistry
     {
         try
         {
-            var result = await _rpc.CallAsync("call zdoZdoArmaVoice_fnc_getSquad");
+            var result = await _rpc.CallAsync("call zdoArmaVoice_fnc_getSquad");
 
             if (string.IsNullOrEmpty(result) || result == "null")
             {
@@ -234,7 +234,7 @@ public class UnitRegistry
     {
         try
         {
-            var sqf = $"'{netId}' call zdoZdoArmaVoice_fnc_getUnitInfo";
+            var sqf = $"'{netId}' call zdoArmaVoice_fnc_getUnitInfo";
             var result = await _rpc.CallAsync(sqf);
 
             if (string.IsNullOrEmpty(result) || result == "null") return;

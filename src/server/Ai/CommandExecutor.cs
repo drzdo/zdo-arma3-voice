@@ -40,7 +40,7 @@ public class CommandExecutor
                 var sqfArgs = argsJson.Replace("\"", "\"\"");
                 var posStr = FmtPos(lookAtPosition);
 
-                var sqf = $"[\"{cmd.Command}\", fromJSON \"{sqfArgs}\", {posStr}] call zdoZdoArmaVoice_fnc_coreCallCommand";
+                var sqf = $"[\"{cmd.Command}\", fromJSON \"{sqfArgs}\", {posStr}] call zdoArmaVoice_fnc_coreCallCommand";
 
                 var resultStr = await _rpc.CallAsync(sqf);
 

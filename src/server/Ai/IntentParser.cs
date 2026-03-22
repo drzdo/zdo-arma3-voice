@@ -109,7 +109,7 @@ public class IntentParser
         try
         {
             var escaped = speechText.Replace("\"", "\\\"");
-            var result = await _rpc.CallAsync($"[\"{escaped}\"] call zdoZdoArmaVoice_fnc_coreIntentPrompt");
+            var result = await _rpc.CallAsync($"[\"{escaped}\"] call zdoArmaVoice_fnc_coreIntentPrompt");
 
             // Result is a JSON hashmap from toJSON
             using var doc = JsonDocument.Parse(result);
