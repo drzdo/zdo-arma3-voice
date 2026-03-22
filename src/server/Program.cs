@@ -142,9 +142,9 @@ public class Program
             rpcClient.HandleResponse(id, result);
         };
 
-        bridge.OnPttEvent = (direction, lookPos) =>
+        bridge.OnPttEvent = (direction) =>
         {
-            Log.Info("PTT", $"{direction} at [{string.Join(", ", lookPos.Select(v => v.ToString("F1")))}]");
+            Log.Info("PTT", direction);
 
             var isDown = direction is "down" or "down_direct";
             var isUp = direction is "up" or "up_direct";

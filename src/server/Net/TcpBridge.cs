@@ -32,7 +32,7 @@ public sealed class TcpBridge : IDisposable
     public Action<int, JsonElement>? OnRpcResponse { get; set; }
 
     /// <summary>Fired when a PTT event arrives ("down"/"up", [x,y,z] position).</summary>
-    public Action<string, float[]>? OnPttEvent { get; set; }
+    public Action<string>? OnPttEvent { get; set; }
 
     /// <summary>Fired when a client connects.</summary>
     public Action? OnClientConnected { get; set; }
@@ -155,11 +155,7 @@ public sealed class TcpBridge : IDisposable
 
                         case "ptt":
                             var dir = root.GetProperty("dir").GetString() ?? "";
-                            var posArr = root.GetProperty("pos");
-                            var pos = new float[posArr.GetArrayLength()];
-                            for (int i = 0; i < pos.Length; i++)
-                                pos[i] = posArr[i].GetSingle();
-                            OnPttEvent?.Invoke(dir, pos);
+                            OnPttEvent?.Invoke(dir);
                             break;
 
                         default:

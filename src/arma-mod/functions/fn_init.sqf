@@ -7,43 +7,27 @@ call compile preprocessFileLineNumbers "\zdo_arma_voice\cba_settings.sqf";
 // Frame counter for state push throttling
 zdo_arma_voice_frameCount = 0;
 
-// PTT keybind — captures look target at press and release, sends to extension
-["ArmaVoice", "zdo_arma_voice_ptt", ["Push to Talk", "Hold to speak a voice command"],
+// PTT keybind (radio)
+["ArmaVoice", "zdo_arma_voice_ptt", ["Push to Talk (Radio)", "Hold to speak a voice command via radio"],
 {
-    // Key down
-    private _lookPos = call zdoArmaVoice_fnc_getLookTarget;
-    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
-        ["t", "ptt"], ["dir", "down"], ["pos", _lookPos]
-    ];
+    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [["t", "ptt"], ["dir", "down"]];
 },
 {
-    // Key up
-    private _lookPos = call zdoArmaVoice_fnc_getLookTarget;
-    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
-        ["t", "ptt"], ["dir", "up"], ["pos", _lookPos]
-    ];
+    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [["t", "ptt"], ["dir", "up"]];
 },
-[0xC7, [false, false, false]]] call CBA_fnc_addKeybind;
-// Default: Home key, no modifiers
+[0x3A, [false, false, false]]] call CBA_fnc_addKeybind;
+// Default: Caps Lock
 
-// Direct speak keybind — speak without radio, only nearby units hear
+// Direct speak keybind (spatial, nearby units only)
 ["ArmaVoice", "zdo_arma_voice_direct", ["Direct Speak", "Hold to speak directly (no radio, nearby units only)"],
 {
-    // Key down
-    private _lookPos = call zdoArmaVoice_fnc_getLookTarget;
-    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
-        ["t", "ptt"], ["dir", "down_direct"], ["pos", _lookPos]
-    ];
+    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [["t", "ptt"], ["dir", "down_direct"]];
 },
 {
-    // Key up
-    private _lookPos = call zdoArmaVoice_fnc_getLookTarget;
-    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
-        ["t", "ptt"], ["dir", "up_direct"], ["pos", _lookPos]
-    ];
+    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [["t", "ptt"], ["dir", "up_direct"]];
 },
-[0xC7, [false, true, false]]] call CBA_fnc_addKeybind;
-// Default: Ctrl+Home
+[0x0F, [false, false, false]]] call CBA_fnc_addKeybind;
+// Default: Tab
 
 // Check if extension is loaded
 private _ver = "zdo_arma_voice" callExtension "status";
