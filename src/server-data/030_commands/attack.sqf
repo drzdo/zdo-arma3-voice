@@ -1,13 +1,12 @@
 zdoArmaVoice_fnc_commandAttack = {
     params ["_args", "_lookAtPosition", "_units"];
-    private _pos = [_args getOrDefault ["position", "lookAt"], _lookAtPosition] call zdoArmaVoice_fnc_resolvePosition;
     private _targetId = _args getOrDefault ["target", ""];
     private _t = objNull;
     if (_targetId != "") then { _t = _targetId call BIS_fnc_objectFromNetId };
     if (isNull _t) then {
-        private _enemies = _pos nearEntities ["Man", 50] select { alive _x && side _x != side player };
+        private _enemies = _lookAtPosition nearEntities ["Man", 50] select { alive _x && side _x != side player };
         if (count _enemies > 0) then { _t = _enemies select 0 } else {
-            private _vehicles = _pos nearEntities ["LandVehicle", 50] select { alive _x && side _x != side player };
+            private _vehicles = _lookAtPosition nearEntities ["LandVehicle", 50] select { alive _x && side _x != side player };
             if (count _vehicles > 0) then { _t = _vehicles select 0 }
         }
     };
@@ -17,5 +16,5 @@ zdoArmaVoice_fnc_commandAttack = {
 };
 ["attack",
 "Engage/fire at a target. Triggers: attack, fire at, engage.",
-"{target?: netId string, position?: Position}",
+"{target?: netId string}",
 zdoArmaVoice_fnc_commandAttack] call zdoArmaVoice_fnc_coreRegisterCommand
