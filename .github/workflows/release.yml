@@ -32,7 +32,7 @@ jobs:
       - name: Package server
         shell: pwsh
         run: |
-          Compress-Archive -LiteralPath "artifacts/zdo-arma-voice-server" -DestinationPath zdo_arma_voice_server.zip
+          Compress-Archive -LiteralPath "artifacts/zdo_arma_voice_server" -DestinationPath zdo_arma_voice_server.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

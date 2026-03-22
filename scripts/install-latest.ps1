@@ -15,10 +15,10 @@ Write-Host "Latest release: $tag"
 
 # Find asset URLs
 $modAsset = $release.assets | Where-Object { $_.name -eq "zdo_arma_voice_mod.zip" }
-$serverAsset = $release.assets | Where-Object { $_.name -eq "zdo-arma-voice-server.zip" }
+$serverAsset = $release.assets | Where-Object { $_.name -eq "zdo_arma_voice_server.zip" }
 
 if (-not $modAsset) { Write-Error "zdo_arma_voice_mod.zip not found in release $tag"; exit 1 }
-if (-not $serverAsset) { Write-Error "zdo-arma-voice-server.zip not found in release $tag"; exit 1 }
+if (-not $serverAsset) { Write-Error "zdo_arma_voice_server.zip not found in release $tag"; exit 1 }
 
 # Download mod
 Write-Host "Downloading mod..."
@@ -26,7 +26,7 @@ Invoke-WebRequest -Uri $modAsset.browser_download_url -OutFile "zdo_arma_voice_m
 
 # Download server
 Write-Host "Downloading server..."
-Invoke-WebRequest -Uri $serverAsset.browser_download_url -OutFile "zdo-arma-voice-server.zip"
+Invoke-WebRequest -Uri $serverAsset.browser_download_url -OutFile "zdo_arma_voice_server.zip"
 
 # Extract mod
 Write-Host "Extracting mod..."
@@ -37,7 +37,7 @@ Remove-Item "zdo_arma_voice_mod.zip"
 # Extract server (flatten nested folder from artifact)
 Write-Host "Extracting server..."
 if (Test-Path "server") { Remove-Item -Recurse -Force "server" }
-Expand-Archive "zdo-arma-voice-server.zip" -DestinationPath "server_tmp"
+Expand-Archive "zdo_arma_voice_server.zip" -DestinationPath "server_tmp"
 # Move contents of the inner folder up
 $inner = Get-ChildItem "server_tmp" -Directory | Select-Object -First 1
 if ($inner) {
@@ -46,7 +46,7 @@ if ($inner) {
     Rename-Item "server_tmp" "server"
 }
 if (Test-Path "server_tmp") { Remove-Item -Recurse -Force "server_tmp" }
-Remove-Item "zdo-arma-voice-server.zip"
+Remove-Item "zdo_arma_voice_server.zip"
 
 Write-Host ""
 Write-Host "Done! Installed ZdoArmaVoice $tag"

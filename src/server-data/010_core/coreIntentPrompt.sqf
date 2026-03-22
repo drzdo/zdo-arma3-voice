@@ -61,6 +61,8 @@ zdoArmaVoice_fnc_coreIntentPrompt = {
     _keys sort true;
     {
         private _entry = zdoArmaVoice_registeredCommands get _x;
+        private _enableIf = _entry getOrDefault ["enableIf", {}];
+        if (!isNil "_enableIf" && {!(_enableIf isEqualTo {})} && {!(call _enableIf)}) then { continue };
         private _desc = _entry get "description";
         private _schema = _entry get "schema";
         _cmdList = _cmdList + format ["- %1: %2 Args: %3", str _x, _desc, _schema] + toString [10]

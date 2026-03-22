@@ -101,5 +101,5 @@ jobs:
       - name: Upload Server
         uses: actions/upload-artifact@v5
         with:
-          name: zdo-arma-voice-server
+          name: zdo_arma_voice_server
           path: dist/
