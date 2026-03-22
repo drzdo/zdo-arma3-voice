@@ -38,8 +38,6 @@ public class CommandExecutor
         {
             try
             {
-                Log.Info("Cmd", $"Executing: {cmd.Command} units=[{string.Join(",", intent.Units)}]");
-
                 var argsJson = cmd.Args.ValueKind != JsonValueKind.Undefined
                     ? cmd.Args.GetRawText()
                     : "{}";
@@ -47,8 +45,10 @@ public class CommandExecutor
                 var sqfArgs = argsJson.Replace("\"", "\"\"");
 
                 var sqf = $"[\"{cmd.Command}\", fromJSON \"{sqfArgs}\", {posStr}, {unitsSqf}] call zdoArmaVoice_fnc_coreCallCommand";
+                Log.Info("SQF", $"Call: {sqf}");
 
                 var resultStr = await _rpc.CallAsync(sqf);
+                Log.Info("SQF", $"Result: {resultStr}");
 
                 var cmdRetry = HandleCommandResult(cmd.Command, resultStr, isRadio);
                 if (cmdRetry != null)

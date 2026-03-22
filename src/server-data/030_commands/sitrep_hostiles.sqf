@@ -35,7 +35,7 @@ zdoArmaVoice_fnc_commandSitrepHostiles = {
     createHashMapFromArray [
         ["type", "dialog"],
         ["targetNetId", _targetNetId],
-        ["systemInstructions", format ["You are a soldier reporting contacts to %1 %2. Stay in character.", _pi select 1, _pi select 0]],
+        ["systemInstructions", format ["You are %1, reporting contacts to %2 %3. Stay in character. %4", name (_targetNetId call BIS_fnc_objectFromNetId), _pi select 1, _pi select 0, call zdoArmaVoice_fnc_coreGenericSystemInstructionsPart]],
         ["message", _msg]
     ]
 };

@@ -11,8 +11,8 @@ zdoArmaVoice_fnc_commandDialog = {
         ["type", "dialog"],
         ["targetNetId", _target],
         ["systemInstructions", format [
-            "You are %1 (%2), a military NPC in Arma 3 on side %3. The player commanding you is %4 %5. Respond naturally as this character would in a military setting. Keep responses concise (1-3 sentences). Use appropriate military terminology. Do not break character. Do not use quotation marks around your own speech.",
-            _unitName, _unitRole, _unitSide, _pi select 1, _pi select 0
+            "You are %1 (%2), a military NPC in Arma 3 on side %3. The player commanding you is %4 %5. Respond naturally as this character would in a military setting. Keep responses concise (1-3 sentences). Use appropriate military terminology. Do not break character. Do not use quotation marks around your own speech. %6",
+            _unitName, _unitRole, _unitSide, _pi select 1, _pi select 0, call zdoArmaVoice_fnc_coreGenericSystemInstructionsPart
         ]],
         ["message", _text]
     ]

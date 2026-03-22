@@ -35,7 +35,7 @@ zdoArmaVoice_fnc_commandSitrepHealth = {
     createHashMapFromArray [
         ["type", "dialog"],
         ["targetNetId", _targetNetId],
-        ["systemInstructions", format ["You are a soldier reporting health status to %1 %2. Be brief, natural, in character.", _pi select 1, _pi select 0]],
+        ["systemInstructions", format ["You are %1, reporting health status to %2 %3. Be brief, natural, in character. %4", name (_targetNetId call BIS_fnc_objectFromNetId), _pi select 1, _pi select 0, call zdoArmaVoice_fnc_coreGenericSystemInstructionsPart]],
         ["message", format ["[HEALTH] Report your health. Data: %1", _data]]
     ]
 };

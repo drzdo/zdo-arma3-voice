@@ -52,7 +52,13 @@ public class IntentParser
             var textResponse = await _llm.CompleteAsync(
                 promptResult.SystemInstructions, messages, temperature: 0.1f, maxTokens: 500);
 
-            if (string.IsNullOrEmpty(textResponse)) return null;
+            if (string.IsNullOrEmpty(textResponse))
+            {
+                Log.Warn("IntentParser", "LLM returned empty response.");
+                return null;
+            }
+
+            Log.Info("IntentParser", $"LLM response: {textResponse}");
 
             var json = StripMarkdownFences(textResponse);
 
@@ -65,7 +71,7 @@ public class IntentParser
 
             if (intent != null)
             {
-                Log.Info("IntentParser", $"units=[{string.Join(",", intent.Units)}]");
+                Log.Info("IntentParser", $"Parsed: units=[{string.Join(",", intent.Units)}]");
                 foreach (var cmd in intent.Commands)
                     Log.Info("IntentParser", $"  command={cmd.Command} args={cmd.Args}");
             }
@@ -96,8 +102,11 @@ public class IntentParser
                 contextSqf = $"createHashMapFromArray [{pairs}]";
             }
 
-            var result = await _rpc.CallAsync(
-                $"[\"{escaped}\", {radioStr}, {contextSqf}] call zdoArmaVoice_fnc_coreIntentPrompt");
+            var sqfCall = $"[\"{escaped}\", {radioStr}, {contextSqf}] call zdoArmaVoice_fnc_coreIntentPrompt";
+            Log.Info("SQF", $"Call: {sqfCall}");
+
+            var result = await _rpc.CallAsync(sqfCall);
+            Log.Info("SQF", $"Result: {result[..Math.Min(200, result.Length)]}{(result.Length > 200 ? "..." : "")}");
 
             using var doc = JsonDocument.Parse(result);
             var root = doc.RootElement;

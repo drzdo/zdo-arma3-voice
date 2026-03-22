@@ -1,9 +1,10 @@
 zdoArmaVoice_fnc_resolvePosition = {
     params ["_spec", "_lookAtPosition"];
-    if (_spec isEqualType "") exitWith {
-        if (_spec == "lookAt") then { _lookAtPosition } else { _lookAtPosition }
-    };
-    if (_spec isEqualType []) exitWith { _spec };
+    if (count _lookAtPosition < 3) then { _lookAtPosition = getPosATL player };
+    if (isNil "_spec") exitWith { _lookAtPosition };
+    if (_spec isEqualType "") exitWith { _lookAtPosition };
+    if (_spec isEqualType [] && {count _spec >= 2}) exitWith { _spec };
+    if !(_spec isEqualType createHashMap) exitWith { _lookAtPosition };
     private _type = _spec getOrDefault ["type", ""];
     switch (_type) do {
         case "relative": {
