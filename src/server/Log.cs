@@ -19,14 +19,6 @@ public static class Log
     public static void Warn(string tag, string message) => Write("WARN", tag, message);
     public static void Error(string tag, string message) => Write("ERR ", tag, message);
 
-    public static void Sqf(int id, string sqf)
-    {
-        var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-        var line = $"[{timestamp}] [SQF] id={id}\n{sqf}\n---";
-        Console.WriteLine($"[SQF] id={id} {sqf[..Math.Min(80, sqf.Length)]}...");
-        Append(line);
-    }
-
     private static void Write(string level, string tag, string message)
     {
         var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");

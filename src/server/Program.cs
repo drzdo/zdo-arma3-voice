@@ -144,8 +144,6 @@ public class Program
 
         bridge.OnPttEvent = (direction) =>
         {
-            Log.Info("PTT", direction);
-
             var isDown = direction is "down" or "down_direct";
             var isUp = direction is "up" or "up_direct";
             var isRadio = direction is "down" or "up";
@@ -153,32 +151,35 @@ public class Program
             if (isDown)
             {
                 speechRecognizer?.StartRecording();
-                Log.Info("Mic", $"Recording started ({(isRadio ? "radio" : "direct")})...");
+                Log.Info("Pipeline", $"Recording started ({(isRadio ? "radio" : "direct")})");
             }
             else if (isUp)
             {
                 if (speechRecognizer == null)
                 {
-                    Log.Warn("Mic", "Speech recognizer not available.");
+                    Log.Warn("Pipeline", "Speech recognizer not available.");
                     return;
                 }
 
                 speechRecognizer.StopRecording();
-                Log.Info("Mic", "Recording stopped, transcribing...");
+                Log.Info("Pipeline", "Recording stopped, transcribing...");
                 var capturedIsRadio = isRadio;
 
                 _ = Task.Run(async () =>
                 {
                     try
                     {
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
                         var transcript = await speechRecognizer.TranscribeAsync();
+                        sw.Stop();
+
                         if (string.IsNullOrWhiteSpace(transcript))
                         {
-                            Log.Info("Mic", "No speech detected.");
+                            Log.Info("STT", $"No speech detected ({sw.ElapsedMilliseconds}ms)");
                             return;
                         }
 
-                        Log.Info("Mic", $"Transcript: \"{transcript}\"");
+                        Log.Info("STT", $"Recognized ({sw.ElapsedMilliseconds}ms): \"{transcript}\"");
 
                         rpcClient.Fire($"[\"{transcript.Replace("\"", "\"\"")}\"] call zdoArmaVoice_fnc_coreOnPlayerSay");
 
@@ -190,7 +191,7 @@ public class Program
                             var result = await intentParser.ParseAsync(transcript, capturedIsRadio, extraContext);
                             if (result == null)
                             {
-                                Log.Warn("Mic", "Could not parse intent.");
+                                Log.Warn("Pipeline", "Could not parse intent.");
                                 break;
                             }
 
@@ -202,17 +203,17 @@ public class Program
 
                             if (iteration + 1 >= maxIterations)
                             {
-                                Log.Warn("Mic", "Max retry iterations reached, stopping.");
+                                Log.Warn("Pipeline", "Max retry iterations reached.");
                                 break;
                             }
 
-                            Log.Info("Mic", $"Command requested retry with context: {string.Join(",", retryContext.Keys)}");
+                            Log.Info("Pipeline", $"Retry with context: [{string.Join(",", retryContext.Keys)}]");
                             extraContext = retryContext;
                         }
                     }
                     catch (Exception ex)
                     {
-                        Log.Error("Mic", $"Error in speech pipeline: {ex.Message}");
+                        Log.Error("Pipeline", $"Error: {ex.Message}");
                     }
                 });
             }

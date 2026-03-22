@@ -45,7 +45,14 @@ zdoArmaVoice_fnc_resolvePosition = {
             [(_pos select 0) + _distance * sin _rad, (_pos select 1) + _distance * cos _rad, _pos select 2]
         };
         case "marker": {
-            getMarkerPos (_spec getOrDefault ["marker", ""])
+            private _markerQuery = _spec getOrDefault ["marker", ""];
+            private _markerPos = getMarkerPos _markerQuery;
+            if (_markerPos isEqualTo [0,0,0]) then {
+                private _found = "";
+                { if (markerText _x == _markerQuery) exitWith { _found = _x } } forEach allMapMarkers;
+                if (_found != "") then { _markerPos = getMarkerPos _found }
+            };
+            if (_markerPos isEqualTo [0,0,0]) then { _lookAtPosition } else { _markerPos }
         };
         case "named": {
             [_spec getOrDefault ["name", ""]] call zdoArmaVoice_fnc_getNamedPos

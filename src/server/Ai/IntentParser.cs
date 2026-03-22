@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace ZdoArmaVoice.Server.Ai;
@@ -8,9 +9,6 @@ public class ParsedCommand
     public JsonElement Args { get; set; }
 }
 
-/// <summary>
-/// Parsed intent: who + what.
-/// </summary>
 public class ParsedIntent
 {
     public List<string> Units { get; set; } = [];
@@ -25,10 +23,6 @@ public class IntentPromptResult
     public bool IsRadio { get; set; } = true;
 }
 
-/// <summary>
-/// Calls SQF for the intent prompt, sends to LLM, parses response.
-/// C# is agnostic to command args — just validates JSON and passes through.
-/// </summary>
 public class IntentParser
 {
     private readonly ILlmClient _llm;
@@ -45,42 +39,44 @@ public class IntentParser
     {
         try
         {
+            // 1. Get prompt from SQF
             var promptResult = await GetIntentPromptAsync(speechText, isRadio, extraContext);
             if (promptResult == null) return null;
 
+            // 2. Call LLM for intent
+            var sw = Stopwatch.StartNew();
             var messages = new List<LlmMessage> { new("user", promptResult.Message) };
             var textResponse = await _llm.CompleteAsync(
                 promptResult.SystemInstructions, messages, temperature: 0.1f, maxTokens: 500);
+            sw.Stop();
 
             if (string.IsNullOrEmpty(textResponse))
             {
-                Log.Warn("IntentParser", "LLM returned empty response.");
+                Log.Warn("LLM", $"Intent LLM returned empty ({sw.ElapsedMilliseconds}ms)");
                 return null;
             }
 
-            Log.Info("IntentParser", $"LLM response: {textResponse}");
+            Log.Info("LLM", $"Intent result ({sw.ElapsedMilliseconds}ms): {textResponse}");
 
+            // 3. Parse
             var json = StripMarkdownFences(textResponse);
-
             var intent = TryParseIntent(json);
             if (intent == null)
             {
-                Log.Warn("IntentParser", "Bad JSON from LLM, retrying with fix prompt...");
+                Log.Warn("LLM", "Bad JSON, retrying...");
                 intent = await RetryFixAsync(json);
             }
 
             if (intent != null)
             {
-                Log.Info("IntentParser", $"Parsed: units=[{string.Join(",", intent.Units)}]");
-                foreach (var cmd in intent.Commands)
-                    Log.Info("IntentParser", $"  command={cmd.Command} args={cmd.Args}");
+                Log.Info("Intent", $"units=[{string.Join(",", intent.Units)}] commands=[{string.Join(",", intent.Commands.Select(c => c.Command))}]");
             }
 
             return intent != null ? (intent, promptResult.LookAtPosition, promptResult.IsRadio) : null;
         }
         catch (Exception ex)
         {
-            Log.Error("IntentParser", $"Error: {ex.Message}");
+            Log.Error("Intent", $"Error: {ex.Message}");
             return null;
         }
     }
@@ -93,7 +89,6 @@ public class IntentParser
             var escaped = speechText.Replace("\"", "\\\"");
             var radioStr = isRadio ? "true" : "false";
 
-            // Build context hashmap for SQF: createHashMapFromArray [["key",true],...]
             var contextSqf = "createHashMap";
             if (extraContext != null && extraContext.Count > 0)
             {
@@ -103,10 +98,12 @@ public class IntentParser
             }
 
             var sqfCall = $"[\"{escaped}\", {radioStr}, {contextSqf}] call zdoArmaVoice_fnc_coreIntentPrompt";
-            Log.Info("SQF", $"Call: {sqfCall}");
+            Log.Info("SQF", $"coreIntentPrompt(\"{speechText}\", isRadio={isRadio})");
 
+            var sw = Stopwatch.StartNew();
             var result = await _rpc.CallAsync(sqfCall);
-            Log.Info("SQF", $"Result: {result[..Math.Min(200, result.Length)]}{(result.Length > 200 ? "..." : "")}");
+            sw.Stop();
+            Log.Info("SQF", $"coreIntentPrompt -> {result.Length} chars ({sw.ElapsedMilliseconds}ms)");
 
             using var doc = JsonDocument.Parse(result);
             var root = doc.RootElement;
@@ -138,14 +135,11 @@ public class IntentParser
         }
         catch (Exception ex)
         {
-            Log.Error("IntentParser", $"Failed to get intent prompt from SQF: {ex.Message}");
+            Log.Error("SQF", $"coreIntentPrompt failed: {ex.Message}");
             return null;
         }
     }
 
-    /// <summary>
-    /// Parse LLM response: {units: [...], commands: [{command, args}]}
-    /// </summary>
     private static ParsedIntent? TryParseIntent(string json)
     {
         try
@@ -157,7 +151,6 @@ public class IntentParser
 
             var intent = new ParsedIntent();
 
-            // Parse units — strings ("netId", "all", "red") or numbers (squad index)
             if (root.TryGetProperty("units", out var unitsProp) && unitsProp.ValueKind == JsonValueKind.Array)
             {
                 foreach (var u in unitsProp.EnumerateArray())
@@ -169,7 +162,6 @@ public class IntentParser
                 }
             }
 
-            // Parse commands
             if (root.TryGetProperty("commands", out var cmdsProp) && cmdsProp.ValueKind == JsonValueKind.Array)
             {
                 foreach (var el in cmdsProp.EnumerateArray())
@@ -205,24 +197,26 @@ public class IntentParser
 
         try
         {
+            var sw = Stopwatch.StartNew();
             var messages = new List<LlmMessage> { new("user", fixPrompt) };
             var fixedResponse = await _llm.CompleteAsync(
                 "You fix broken JSON. Return ONLY the fixed JSON, nothing else.",
                 messages, temperature: 0f, maxTokens: 500);
+            sw.Stop();
 
             if (string.IsNullOrEmpty(fixedResponse)) return null;
 
+            Log.Info("LLM", $"JSON fix result ({sw.ElapsedMilliseconds}ms): {fixedResponse}");
+
             var result = TryParseIntent(StripMarkdownFences(fixedResponse));
-            if (result != null)
-                Log.Info("IntentParser", "Retry succeeded.");
-            else
-                Log.Warn("IntentParser", "Retry also failed.");
+            if (result == null)
+                Log.Warn("LLM", "JSON fix also failed.");
 
             return result;
         }
         catch (Exception ex)
         {
-            Log.Error("IntentParser", $"Retry error: {ex.Message}");
+            Log.Error("LLM", $"JSON fix error: {ex.Message}");
             return null;
         }
     }

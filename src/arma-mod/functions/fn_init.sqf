@@ -8,7 +8,7 @@ call compile preprocessFileLineNumbers "\zdo_arma_voice\cba_settings.sqf";
 zdo_arma_voice_frameCount = 0;
 
 // PTT keybind (radio)
-["ArmaVoice", "zdo_arma_voice_ptt", ["Push to Talk (Radio)", "Hold to speak a voice command via radio"],
+["ZdoArmaVoice", "zdo_arma_voice_ptt", ["Push to Talk (Radio)", "Hold to speak a voice command via radio"],
 {
     "zdo_arma_voice" callExtension toJSON createHashMapFromArray [["t", "ptt"], ["dir", "down"]];
 },
@@ -19,7 +19,7 @@ zdo_arma_voice_frameCount = 0;
 // Default: Caps Lock
 
 // Direct speak keybind (spatial, nearby units only)
-["ArmaVoice", "zdo_arma_voice_direct", ["Direct Speak", "Hold to speak directly (no radio, nearby units only)"],
+["ZdoArmaVoice", "zdo_arma_voice_direct", ["Direct Speak", "Hold to speak directly (no radio, nearby units only)"],
 {
     "zdo_arma_voice" callExtension toJSON createHashMapFromArray [["t", "ptt"], ["dir", "down_direct"]];
 },
@@ -32,11 +32,11 @@ zdo_arma_voice_frameCount = 0;
 // Check if extension is loaded
 private _ver = "zdo_arma_voice" callExtension "status";
 if (_ver == "") then {
-    diag_log "ArmaVoice: ERROR — extension zdo_arma_voice_x64.dll not loaded!";
-    systemChat "ArmaVoice: extension NOT loaded — check that zdo_arma_voice_x64.dll is in the mod folder";
+    diag_log "ZdoArmaVoice: ERROR — extension zdo_arma_voice_x64.dll not loaded!";
+    systemChat "ZdoArmaVoice: extension NOT loaded — check that zdo_arma_voice_x64.dll is in the mod folder";
 } else {
-    diag_log "ArmaVoice: extension loaded";
-    systemChat "ArmaVoice: extension loaded";
+    diag_log "ZdoArmaVoice: extension loaded";
+    systemChat "ZdoArmaVoice: extension loaded";
 };
 
 // Per-frame handler — state push + RPC poll
@@ -73,13 +73,13 @@ addMissionEventHandler ["EachFrame", {
         private _sqf = _msg get "sqf";
         if (_id == 0) then {
             // Fire-and-forget — execute directly
-            diag_log format ["ArmaVoice RPC fire: %1", _sqf];
+            diag_log format ["ZdoArmaVoice RPC fire: %1", _sqf];
             call compile _sqf;
         } else {
             // RPC with response expected
-            diag_log format ["ArmaVoice RPC call (id=%1): %2", _id, _sqf];
+            diag_log format ["ZdoArmaVoice RPC call (id=%1): %2", _id, _sqf];
             private _result = call compile _sqf;
-            diag_log format ["ArmaVoice RPC result (id=%1): %2", _id, str _result select [0, 80]];
+            diag_log format ["ZdoArmaVoice RPC result (id=%1): %2", _id, str _result select [0, 80]];
             "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
                 ["t", "rpc"], ["id", _id], ["r", _result]
             ];
@@ -97,11 +97,11 @@ addMissionEventHandler ["EachFrame", {
                 "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
                     ["t", "connect"], ["addr", _addr]
                 ];
-                systemChat format ["ArmaVoice: connecting to %1...", _addr];
+                systemChat format ["ZdoArmaVoice: connecting to %1...", _addr];
             } else {
                 if (isNil "zdo_arma_voice_wasConnected") then {
                     zdo_arma_voice_wasConnected = true;
-                    systemChat "ArmaVoice: connected";
+                    systemChat "ZdoArmaVoice: connected";
                 };
             };
         };
@@ -109,4 +109,4 @@ addMissionEventHandler ["EachFrame", {
     };
 };
 
-diag_log "ArmaVoice: initialized";
+diag_log "ZdoArmaVoice: initialized";

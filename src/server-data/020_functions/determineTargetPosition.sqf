@@ -1,5 +1,9 @@
 zdoArmaVoice_fnc_determineTargetPosition = {
-if (visibleMap) exitWith { screenToWorld getMousePosition };
+if (visibleMap) exitWith {
+    private _map = findDisplay 12;
+    private _ctrlMap = _map displayCtrl 51;
+    _ctrlMap ctrlMapScreenToWorld getMousePosition
+};
 private _start = eyePos player;
 private _dir = if (currentWeapon player != "") then {
     player weaponDirection currentWeapon player

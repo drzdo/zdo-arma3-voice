@@ -82,8 +82,6 @@ public sealed class TcpBridge : IDisposable
     {
         var obj = new JsonObject { ["id"] = id, ["sqf"] = sqf };
         SendLine(obj.ToJsonString());
-
-        Log.Sqf(id, sqf);
     }
 
     private void SendLine(string line)

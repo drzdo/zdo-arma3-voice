@@ -64,7 +64,10 @@ zdoArmaVoice_fnc_commandPickup = {
     systemChat format ["Picked up: %1", _itemName];
     [_units, "pickup"] call zdoArmaVoice_fnc_buildAckInstruction
 };
-["pickup",
-"Pick up an item near crosshair (weapon, pistol, grenade, ammo, equipment). Triggers: take that, pick up, grab the AK.",
-"{item: display name of item to pick up (from nearby items list if available), nearbyItems?: array of available item names}",
-zdoArmaVoice_fnc_commandPickup] call zdoArmaVoice_fnc_coreRegisterCommand
+
+// does not work, needs testing
+
+// ["pickup",
+// "Pick up an item near crosshair (weapon, pistol, grenade, ammo, equipment). Triggers: take that, pick up, grab the AK.",
+// "{item: display name of item to pick up (from nearby items list if available), nearbyItems?: array of available item names}",
+// zdoArmaVoice_fnc_commandPickup] call zdoArmaVoice_fnc_coreRegisterCommand

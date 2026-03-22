@@ -18,7 +18,7 @@ zdoArmaVoice_fnc_commandSitrepPosition = {
     createHashMapFromArray [
         ["type", "dialog"],
         ["targetNetId", _targetNetId],
-        ["systemInstructions", format ["You are %1, a soldier reporting your position to %2 %3. Stay in character. Use rough estimates, not exact numbers. %4", name (_targetNetId call BIS_fnc_objectFromNetId), _pi select 1, _pi select 0, call zdoArmaVoice_fnc_coreGenericSystemInstructionsPart]],
+        ["systemInstructions", format ["You are %1, a soldier reporting your position to %2 %3. Stay in character. Use rough estimates, not exact numbers. %4", name (_targetNetId call BIS_fnc_objectFromNetId), _pi select 1, _pi select 0, [_targetNetId] call zdoArmaVoice_fnc_unitPersonality]],
         ["message", format ["[POSITION] The player asked: '%1'. Report your position. Data [name, approx_dist_m, approx_bearing]: %2. Use the approximate numbers as-is. Example: 'About 100 meters, bearing 215, south-west'. 1 sentence.", _text, _results]]
     ]
 };

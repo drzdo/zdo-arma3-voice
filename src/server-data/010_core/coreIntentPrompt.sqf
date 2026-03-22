@@ -28,7 +28,7 @@ zdoArmaVoice_fnc_coreIntentPrompt = {
     private _markers = call zdoArmaVoice_fnc_getMarkers;
     private _markerContext = "";
     if (count _markers > 0) then {
-        _markerContext = "  Map markers: " + str _markers + toString [10]
+        _markerContext = "  Map markers [id, displayName]: " + str _markers + " (use displayName for marker references)" + toString [10]
     };
 
     private _itemsContext = "";
@@ -90,7 +90,9 @@ zdoArmaVoice_fnc_coreIntentPrompt = {
         + "   - netId string: specific unit from the squad list (e.g. ""2:345"")" + _nl
         + "   - number: squad index (e.g. 2 = second unit, ""second""/""второй"" = 2)" + _nl
         + "     Player is #0, first squad member is #1, second is #2, etc." + _nl
-        + "   - team color string: ""red"", ""green"", ""blue"", ""yellow""" + _nl
+        + "   - team color: ""red"", ""green"", ""blue"", ""yellow"", ""white""" + _nl
+        + "     Aliases: team 1/A/alpha/первая = red, team 2/B/bravo/вторая = green, team 3/C/charlie/третья = blue, team 4/D/delta/четвёртая = yellow" + _nl
+        + "     Also: группа А = red, group B = green, etc." + _nl
         + "   - ""all"": whole squad" + _nl
         + "   - ""last"": not specified, reuse previously addressed units" + _nl
         + "   Only use ""all"" if it is the very first command or the player clearly means everyone." + _nl

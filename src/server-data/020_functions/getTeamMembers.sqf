@@ -1,4 +1,5 @@
 zdoArmaVoice_fnc_getTeamMembers = {
 params ["_team"];
-units group player select { assignedTeam _x == _team } apply { _x call BIS_fnc_netId }
+private _armaTeam = if (_team == "WHITE") then { "MAIN" } else { _team };
+(units group player - [player]) select { assignedTeam _x == _armaTeam } apply { _x call BIS_fnc_netId }
 }
