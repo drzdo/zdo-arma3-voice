@@ -1,6 +1,10 @@
 zdoArmaVoice_fnc_commandRegroup = {
     params ["_args", "_lookAtPosition", "_units"];
-    { (_x call BIS_fnc_objectFromNetId) doFollow player } forEach _units;
+    {
+        private _u = _x call BIS_fnc_objectFromNetId;
+        _u doFollow player;
+        _u setVariable ["zdoArmaVoice_toldRegroupAt", time]
+    } forEach _units;
     [_units, "regroup"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["regroup",

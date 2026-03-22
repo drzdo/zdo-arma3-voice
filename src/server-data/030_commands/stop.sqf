@@ -1,6 +1,10 @@
 zdoArmaVoice_fnc_commandStop = {
     params ["_args", "_lookAtPosition", "_units"];
-    { doStop (_x call BIS_fnc_objectFromNetId) } forEach _units;
+    {
+        private _u = _x call BIS_fnc_objectFromNetId;
+        doStop _u;
+        _u setVariable ["zdoArmaVoice_toldStopAt", time]
+    } forEach _units;
     [_units, "stop"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["stop",
