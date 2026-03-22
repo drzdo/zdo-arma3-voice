@@ -13,6 +13,16 @@ Two PTT modes:
 - **Caps Lock (radio)** — all squad units hear you, response plays with radio effect
 - **Tab (direct)** — only units within 20m hear you, response plays as spatial audio
 
+## Install
+
+See [doc/SETUP.md](doc/SETUP.md) for installation, configuration, and build instructions.
+
+## Documentation
+
+- [doc/SETUP.md](doc/SETUP.md) — installation, configuration, Russian language setup
+- [doc/DEVELOPMENT.md](doc/DEVELOPMENT.md) — building, releasing, CI/CD
+- [doc/DESIGN-v1.md](doc/DESIGN-v1.md) — architecture and design
+
 ## Voice Commands
 
 ### Movement
@@ -145,12 +155,3 @@ Teams have multiple names — use whichever feels natural:
 - **"red team" / "группа А" / "team 1"** — team color (see Teams above)
 - **"everyone" / "все"** — whole squad
 - No unit mentioned — reuses last addressed units (falls back to whole squad on first command)
-
-## Install
-
-See [doc/SETUP.md](doc/SETUP.md) for installation, configuration, and build instructions.
-
-## Documentation
-
-- [doc/SETUP.md](doc/SETUP.md) — installation, configuration, building, Russian language setup
-- [doc/DESIGN-v1.md](doc/DESIGN-v1.md) — architecture and design

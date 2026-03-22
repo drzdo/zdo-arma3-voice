@@ -3,22 +3,27 @@
 ## Requirements
 
 - Arma 3 with CBA_A3
-- .NET 8 SDK (for building)
-- One of: Gemini API key, Claude API key (for intent parsing and NPC dialog)
-- One of: Whisper model file, Deepgram API key, Google/Azure STT key (for speech recognition)
-- Optional: Piper TTS server or ElevenLabs API key (for NPC voice)
+- API keys (see Recommended setup below)
 
-## Install mod
+## Recommended setup
 
-Download the latest release or build from source.
+- **STT**: Deepgram (`stt.system: deepgram`) — fast, accurate, streams in real-time
+- **LLM (intent)**: Gemini 2.0 Flash (`llm.intent.system: gemini`, `model: gemini-2.0-flash`) — cheap, fast, good enough for command parsing
+- **LLM (dialog)**: Gemini 2.0 Flash (`llm.dialog.system: gemini`, `model: gemini-2.0-flash`) — works well for NPC responses too
 
-Copy `@zdo_arma_voice` folder (containing `zdo_arma_voice_x64.dll` and `addons/`) into your Arma 3 directory. Enable in the launcher.
+## Install
 
-### Quick install via PowerShell
+### Quick install (PowerShell)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/install-latest.ps1
 ```
+
+### Manual install
+
+1. Download the latest release from GitHub (two zips: mod + server)
+2. Copy `@zdo_arma_voice/` folder into your Arma 3 directory. Enable in launcher.
+3. Extract the server zip anywhere (e.g. `C:\ZdoArmaVoice\`)
 
 ## Configuration
 
@@ -26,9 +31,7 @@ powershell -ExecutionPolicy Bypass -File scripts/install-latest.ps1
 cp config-example.yaml config.yaml
 ```
 
-Edit `config.yaml` with your settings. See `config-example.yaml` for all options.
-
-`config.yaml` is gitignored — your keys stay local.
+Edit `config.yaml` with your API keys. See `config-example.yaml` for all options.
 
 The server validates config on startup and fails with clear errors if required fields are missing.
 
@@ -47,9 +50,6 @@ stt:
     language: ru
     encoding: linear16
     sample_rate: 16000
-  whisper:
-    model_path: ggml-base.en.bin
-    language: en
 ```
 
 ### TTS (NPC speech)
@@ -75,15 +75,15 @@ Two LLM slots — intent parsing and NPC dialog:
 ```yaml
 llm:
   intent:
-    system: gemini  # gemini | claude
+    system: gemini
     gemini:
       api_key: YOUR_KEY
-      model: gemini-2.0-flash-lite
+      model: gemini-2.0-flash
   dialog:
-    system: claude  # gemini | claude | none
-    claude:
+    system: gemini
+    gemini:
       api_key: YOUR_KEY
-      model: claude-sonnet-4-20250514
+      model: gemini-2.0-flash
 ```
 
 Set `dialog.system: none` to disable NPC voice responses.
@@ -101,31 +101,23 @@ audio:
     noise_level: 0.02
 ```
 
-### Microphone issues with OBS
-
-If OBS blocks your microphone, set `mic_mode: mme` in config. MME uses the Windows audio mixer and always allows multiple apps to share the mic.
-
-## Build
-
-```
-dotnet build
-```
-
-Builds on macOS/Linux (IL only). NativeAOT publish requires Windows. GitHub Actions handles release builds.
-
 ## Run
 
 ```
-dotnet run --project src/server -- --config config.yaml
+ZdoArmaVoice.Server.exe --config config.yaml
 ```
 
-The server prints available microphone devices on startup — use the index for `mic_device` config.
+The server prints available microphone devices on startup — use the index for `mic_device` if needed.
+
+## Microphone issues with OBS
+
+If OBS blocks your microphone, set `mic_mode: mme` in config. MME uses the Windows audio mixer and always allows multiple apps to share the mic.
 
 ## Russian language setup
 
 ### STT
 
-Use the multilingual Whisper model instead of English-only:
+Use Deepgram with `language: ru`, or the multilingual Whisper model:
 
 ```yaml
 whisper:
@@ -133,8 +125,6 @@ whisper:
 ```
 
 Download from https://huggingface.co/ggerganov/whisper.cpp/tree/main
-
-Or use Deepgram/Google/Azure with `language: ru` or `language: ru-RU`.
 
 ### TTS
 
@@ -147,11 +137,3 @@ piper --model ru_RU-irina-medium.onnx --listen --port 5000
 ### NPC personality
 
 Edit `src/server-data/010_core/coreUnitPersonality.sqf` to change how NPCs speak (language, tone, accent).
-
-## Release
-
-```
-git tag v0.1.0 && git push --tags
-```
-
-GitHub Actions builds and creates a release with mod + server artifacts.

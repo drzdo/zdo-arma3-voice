@@ -90,6 +90,9 @@ public class Program
                 config.Tts.ElevenLabs.Style,
                 config.Tts.ElevenLabs.UseSpeakerBoost,
                 config.Tts.ElevenLabs.Voices),
+            #pragma warning disable CA1416
+            "windows" => new WindowsSynthesizer(config.Tts.Windows.Voice, config.Tts.Windows.Rate),
+            #pragma warning restore CA1416
             _ => new PiperSynthesizer(config.Tts.Piper.Url),
         };
         Log.Info("Server", $"TTS ({config.Tts.System}) ready.");

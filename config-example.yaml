@@ -37,7 +37,7 @@ stt:
     language: ru-RU
 
 tts:
-  system: piper  # piper | elevenlabs
+  system: windows  # windows | piper | elevenlabs
   piper:
     url: http://localhost:5000
   elevenlabs:
@@ -54,6 +54,9 @@ tts:
       indfor: YOUR_INDFOR_VOICE_ID
       # per unit name:
       # Miller: YOUR_MILLER_VOICE_ID
+  windows:
+    voice: ""  # empty = default. Run server to see available voices.
+    rate: 0    # -10 (slowest) to 10 (fastest)
 
 llm:
   intent:

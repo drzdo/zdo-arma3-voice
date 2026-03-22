@@ -202,10 +202,19 @@ public class DeepgramConfig
 
 public class TtsConfig
 {
-    public string System { get; set; } = "piper";
+    public string System { get; set; } = "windows";
     public PiperConfig Piper { get; set; } = new();
     [YamlMember(Alias = "elevenlabs")]
     public ElevenLabsConfig ElevenLabs { get; set; } = new();
+    public WindowsTtsConfig Windows { get; set; } = new();
+}
+
+public class WindowsTtsConfig
+{
+    /// <summary>Voice name. Empty = default. Run server to see available voices.</summary>
+    public string Voice { get; set; } = "";
+    /// <summary>Speech rate: -10 (slowest) to 10 (fastest), 0 = normal.</summary>
+    public int Rate { get; set; } = 0;
 }
 
 public class PiperConfig
