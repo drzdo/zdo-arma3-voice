@@ -14,7 +14,7 @@ public class GoogleRecognizer : ISpeechRecognizer
     private readonly HttpClient _http;
     private readonly string _apiKey;
     private readonly string _language;
-    private WaveInEvent? _waveIn;
+    private IWaveIn? _waveIn;
     private MemoryStream? _audioBuffer;
     private bool _recording;
     private readonly object _lock = new();

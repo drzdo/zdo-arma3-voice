@@ -10,7 +10,7 @@ namespace ZdoArmaVoice.Server.Speech;
 public class WhisperRecognizer : ISpeechRecognizer
 {
     private WhisperProcessor? _processor;
-    private WaveInEvent? _waveIn;
+    private IWaveIn? _waveIn;
     private MemoryStream? _audioBuffer;
     private bool _recording;
     private readonly object _lock = new();

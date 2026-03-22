@@ -17,7 +17,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
     private readonly string _encoding;
     private readonly int _sampleRate;
 
-    private WaveInEvent? _waveIn;
+    private IWaveIn? _waveIn;
     private ClientWebSocket? _ws;
     private volatile bool _wsReady;
     private readonly List<byte[]> _preBuffer = new();

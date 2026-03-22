@@ -54,18 +54,20 @@ zdoArmaVoice_fnc_resolvePosition = {
             };
             if (_markerPos isEqualTo [0,0,0]) then { _lookAtPosition } else { _markerPos }
         };
-        case "named": {
-            [_spec getOrDefault ["name", ""]] call zdoArmaVoice_fnc_getNamedPos
-        };
+        case "named";
         case "unit": {
-            private _ref = _spec getOrDefault ["netId", _spec getOrDefault ["name", ""]];
-            private _target = objNull;
-            if (_ref find ":" >= 0) then {
-                _target = _ref call BIS_fnc_objectFromNetId
-            } else {
-                { if (name _x == _ref) exitWith { _target = _x } } forEach (units group player)
+            private _ref = _spec getOrDefault ["name", _spec getOrDefault ["netId", ""]];
+            private _pos = [_ref] call zdoArmaVoice_fnc_getNamedPos;
+            if (_pos isEqualTo [0,0,0] || _pos isEqualTo []) then {
+                private _target = objNull;
+                if (_ref find ":" >= 0) then {
+                    _target = _ref call BIS_fnc_objectFromNetId
+                } else {
+                    { if (name _x == _ref) exitWith { _target = _x } } forEach (units group player)
+                };
+                if (!isNull _target) then { _pos = getPosATL _target }
             };
-            if (!isNull _target) then { getPosATL _target } else { _lookAtPosition }
+            if (_pos isEqualTo [0,0,0] || _pos isEqualTo []) then { _lookAtPosition } else { _pos }
         };
         default { _lookAtPosition };
     }
