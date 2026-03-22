@@ -41,8 +41,8 @@ zdoArmaVoice_fnc_commandSitrepHostiles = {
         createHashMapFromArray [
             ["type", "dialog"],
             ["targetNetId", _targetNetId],
-            ["systemInstructions", format ["You are %1. Stay in character. Be brief. %2", _unitName, _personality]],
-            ["message", "Report that you see no hostile contacts. One short sentence."]
+            ["systemInstructions", format ["Be very brief. One short sentence. %1", _personality]],
+            ["message", "Say you see no contacts. Do not introduce yourself."]
         ]
     };
     private _data = _allTargets select [0, count _allTargets min 8];
@@ -51,7 +51,7 @@ zdoArmaVoice_fnc_commandSitrepHostiles = {
     createHashMapFromArray [
         ["type", "dialog"],
         ["targetNetId", _targetNetId],
-        ["systemInstructions", format ["You are %1, reporting contacts to %2 %3. Report in concise military style. Use ONLY the data below, do not invent contacts. 1-3 sentences. %4", _unitName, _pi select 1, _pi select 0, _personality]],
+        ["systemInstructions", format ["Report contacts in terse military radio style. Just list contacts: type, distance, azimuth, direction. No greetings, no name, no filler. Example: 'Rifleman, 50 meters, azimuth 130, south-east. Two officers, 100 meters, azimuth 270, west.' %1", _personality]],
         ["message", "Hostiles:" + _nl + _report]
     ]
 };

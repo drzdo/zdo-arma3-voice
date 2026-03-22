@@ -23,6 +23,7 @@ public class DataLoader
         _sqfFiles.Clear();
 
         var files = Directory.GetFiles(dataDir, "*.sqf", SearchOption.AllDirectories)
+            .Where(f => !Path.GetFileName(f).StartsWith('_'))
             .Select(f => (FullPath: f, RelPath: Path.GetRelativePath(dataDir, f)))
             .OrderBy(f => f.RelPath, StringComparer.Ordinal)
             .ToList();
