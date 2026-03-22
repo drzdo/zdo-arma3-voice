@@ -17,6 +17,8 @@ Two PTT modes:
 
 See [doc/SETUP.md](doc/SETUP.md) for installation, configuration, and build instructions.
 
+There may be bugs. Report them in `Issues`.
+
 ## Documentation
 
 - [doc/SETUP.md](doc/SETUP.md) — installation, configuration, Russian language setup
