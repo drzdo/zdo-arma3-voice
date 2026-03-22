@@ -14,6 +14,9 @@ zdoArmaVoice_fnc_coreResolveToWhom = {
                 { _result pushBack (_x call BIS_fnc_netId) } forEach _allSquad
             } else {
                 if (_x isEqualType "" && {_x == "last"}) then {
+                    if (count zdoArmaVoice_lastAddressedUnits == 0) then {
+                        zdoArmaVoice_lastAddressedUnits = _allSquad apply { _x call BIS_fnc_netId }
+                    };
                     _result = +zdoArmaVoice_lastAddressedUnits
                 } else {
                     if (_x isEqualType "" && {toUpper _x in ["RED","GREEN","BLUE","YELLOW","WHITE"]}) then {
@@ -26,10 +29,6 @@ zdoArmaVoice_fnc_coreResolveToWhom = {
         }
     } forEach _refs;
     _result = [_result] call zdoArmaVoice_fnc_filterAlive;
-    if (count _result == 0) then {
-        _result = _allSquad apply { _x call BIS_fnc_netId };
-        _result = [_result] call zdoArmaVoice_fnc_filterAlive
-    };
     if (count _result > 0) then { zdoArmaVoice_lastAddressedUnits = _result };
     _result
 }
