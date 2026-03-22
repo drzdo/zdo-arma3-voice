@@ -37,7 +37,7 @@ Structure:
 
 Commands are defined in SQF and self-register. Each command file:
 1. Defines its function (receives `_args` hashmap + `_lookAtPosition`)
-2. Calls `zdoArmaMic_fnc_coreRegisterCommand` with: id, description, schema, function
+2. Calls `zdoArmaVoice_fnc_coreRegisterCommand` with: id, description, schema, function
 
 The LLM returns `[{"command": "move", "args": {...}}]`. C# is agnostic to args — just proxies them to SQF via `coreCallCommand`.
 
@@ -48,7 +48,7 @@ Commands can return:
 
 ### Intent prompt
 
-`zdoArmaMic_fnc_coreIntentPrompt` builds the full LLM prompt in SQF:
+`zdoArmaVoice_fnc_coreIntentPrompt` builds the full LLM prompt in SQF:
 - Gathers game state (player info, squad, markers)
 - Enumerates registered commands with descriptions and schemas
 - Returns hashmap: `{systemInstructions, message, lookAtPosition}`

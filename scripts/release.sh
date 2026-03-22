@@ -22,12 +22,5 @@ if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     exit 0
 fi
 
-# Update version in .hemtt/project.toml
-sed -i '' "s/^major = .*/major = $major/" .hemtt/project.toml
-sed -i '' "s/^minor = .*/minor = $minor/" .hemtt/project.toml
-sed -i '' "s/^patch = .*/patch = $patch/" .hemtt/project.toml
-git add .hemtt/project.toml
-git commit -m "Bump version to $next"
-
 git tag "$next" && git push origin "$next" && git push origin HEAD
 echo "Released $next"

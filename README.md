@@ -1,4 +1,4 @@
-# Zdo Arma Mic
+# Zdo Arma Voice
 
 Voice command and NPC dialogue system for Arma 3. Speak commands to control units and talk to NPCs with AI-generated responses and spatial audio.
 
