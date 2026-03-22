@@ -18,109 +18,115 @@ zdoArmaVoice_fnc_commandLoot = {
             private _startTime = time;
             private _hasStorage = !isNull _storage;
 
-            private _fnc_cancelled = {
-                !alive _unit
-                || { (_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime }
-                || { (_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime }
-                || { (_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime }
-            };
-
-            private _fnc_moveAndWait = {
-                params ["_target"];
-                _unit doMove (getPosATL _target);
-                private _timeout = time + 30;
-                waitUntil { sleep 1; (call _fnc_cancelled) || (_unit distance _target < 4) || (time > _timeout) };
-                !(call _fnc_cancelled) && (_unit distance _target < 4)
-            };
-
-            private _fnc_transferItem = {
-                params ["_cls", "_source"];
-                if (_hasStorage) then {
-                    if (_cls isKindOf ["Rifle", configFile >> "CfgWeapons"]
-                        || _cls isKindOf ["Launcher", configFile >> "CfgWeapons"]
-                        || _cls isKindOf ["Pistol", configFile >> "CfgWeapons"]
-                        || _cls isKindOf ["Binocular", configFile >> "CfgWeapons"]) then {
-                        _storage addWeaponCargoGlobal [_cls, 1]
-                    } else {
-                        if (_cls isKindOf ["Default", configFile >> "CfgMagazines"]) then {
-                            _storage addMagazineCargoGlobal [_cls, 1]
-                        } else {
-                            _storage addItemCargoGlobal [_cls, 1]
-                        }
-                    }
-                } else {
-                    if (_cls isKindOf ["Default", configFile >> "CfgMagazines"]) then {
-                        _unit addMagazine _cls
-                    } else {
-                        _unit addItem _cls
-                    }
-                }
-            };
-
             systemChat format ["%1 starting loot run%2", name _unit, if (_hasStorage) then { format [" (storage: %1)", typeOf _storage] } else { " (on self)" }];
 
-            while {!(call _fnc_cancelled)} do {
+            while {true} do {
+                if (!alive _unit) exitWith {};
+                if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime) exitWith {};
+                if ((_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime) exitWith {};
+                if ((_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) exitWith {};
+
                 private _weaponPiles = _center nearObjects ["WeaponHolderSimulated", _radius];
                 _weaponPiles append (_center nearObjects ["WeaponHolder", _radius]);
                 _weaponPiles append (_center nearObjects ["GroundWeaponHolder", _radius]);
-
                 private _bodies = entities "Man" select { !alive _x && _x distance _center < _radius };
-
                 private _targets = _weaponPiles + _bodies;
-                if (count _targets == 0) exitWith {};
+
+                if (count _targets == 0) exitWith {
+                    systemChat format ["%1 loot run complete — nothing left", name _unit]
+                };
 
                 _targets = [_targets, [], {_x distance _unit}, "ASCEND"] call BIS_fnc_sortBy;
 
-                private _looted = false;
+                private _didLoot = false;
                 {
-                    private _target = _x;
-                    if (call _fnc_cancelled) exitWith {};
+                    private _tgt = _x;
+                    if (!alive _unit) exitWith {};
+                    if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime) exitWith {};
+                    if ((_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime) exitWith {};
+                    if ((_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) exitWith {};
 
-                    if (!([_target] call _fnc_moveAndWait)) then { continue };
-
-                    if (_target isKindOf "Man") then {
-                        {
-                            _x params ["_cls", "_count"];
-                            for "_i" from 1 to _count do {
-                                [_cls, _target] call _fnc_transferItem;
-                                _target removeMagazine _cls
-                            }
-                        } forEach (magazinesAmmoFull _target apply { [_x select 0, 1] });
-
-                        { [_x, _target] call _fnc_transferItem } forEach (weapons _target);
-                        { _target removeWeapon _x } forEach (weapons _target);
-
-                        { [_x, _target] call _fnc_transferItem } forEach (items _target);
-                        removeAllItems _target;
-
-                        if (vest _target != "") then { [vest _target, _target] call _fnc_transferItem; removeVest _target };
-                        if (headgear _target != "") then { [headgear _target, _target] call _fnc_transferItem; removeHeadgear _target };
-                        if (backpack _target != "") then { [backpack _target, _target] call _fnc_transferItem; removeBackpack _target };
-                    } else {
-                        { [_x, _target] call _fnc_transferItem } forEach (weaponCargo _target);
-                        { [_x, _target] call _fnc_transferItem } forEach (magazineCargo _target);
-                        { [_x, _target] call _fnc_transferItem } forEach (itemCargo _target);
-                        clearWeaponCargoGlobal _target;
-                        clearMagazineCargoGlobal _target;
-                        clearItemCargoGlobal _target;
-                        deleteVehicle _target
+                    _unit doMove (getPos _tgt);
+                    private _timeout = time + 30;
+                    waitUntil {
+                        sleep 1;
+                        !alive _unit
+                        || { (_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime }
+                        || { (_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime }
+                        || { (_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime }
+                        || { _unit distance _tgt < 4 }
+                        || { time > _timeout }
                     };
-                    _looted = true
+
+                    if (!alive _unit) exitWith {};
+                    if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime) exitWith {};
+                    if ((_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime) exitWith {};
+                    if ((_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) exitWith {};
+                    if (_unit distance _tgt >= 4) then { continue };
+
+                    if (_tgt isKindOf "Man") then {
+                        {
+                            private _cls = _x select 0;
+                            if (_hasStorage) then {
+                                if (_cls isKindOf ["Default", configFile >> "CfgMagazines"]) then {
+                                    _storage addMagazineCargoGlobal [_cls, 1]
+                                } else {
+                                    _storage addItemCargoGlobal [_cls, 1]
+                                }
+                            } else {
+                                if (_cls isKindOf ["Default", configFile >> "CfgMagazines"]) then {
+                                    _unit addMagazine _cls
+                                } else {
+                                    _unit addItem _cls
+                                }
+                            };
+                            _tgt removeMagazine _cls
+                        } forEach (magazinesAmmoFull _tgt apply { [_x select 0, 1] });
+
+                        {
+                            private _w = _x;
+                            if (_hasStorage) then { _storage addWeaponCargoGlobal [_w, 1] } else { _unit addWeapon _w };
+                            _tgt removeWeapon _w
+                        } forEach (weapons _tgt);
+
+                        { if (_hasStorage) then { _storage addItemCargoGlobal [_x, 1] } else { _unit addItem _x } } forEach (items _tgt);
+                        removeAllItems _tgt;
+
+                        if (vest _tgt != "") then { if (_hasStorage) then { _storage addItemCargoGlobal [vest _tgt, 1] }; removeVest _tgt };
+                        if (headgear _tgt != "") then { if (_hasStorage) then { _storage addItemCargoGlobal [headgear _tgt, 1] }; removeHeadgear _tgt };
+                        if (backpack _tgt != "") then { if (_hasStorage) then { _storage addBackpackCargoGlobal [backpack _tgt, 1] }; removeBackpack _tgt }
+                    } else {
+                        {
+                            if (_hasStorage) then { _storage addWeaponCargoGlobal [_x, 1] } else { _unit addWeapon _x }
+                        } forEach (weaponCargo _tgt);
+                        {
+                            if (_hasStorage) then { _storage addMagazineCargoGlobal [_x, 1] } else { _unit addMagazine _x }
+                        } forEach (magazineCargo _tgt);
+                        {
+                            if (_hasStorage) then { _storage addItemCargoGlobal [_x, 1] } else { _unit addItem _x }
+                        } forEach (itemCargo _tgt);
+                        clearWeaponCargoGlobal _tgt;
+                        clearMagazineCargoGlobal _tgt;
+                        clearItemCargoGlobal _tgt;
+                        deleteVehicle _tgt
+                    };
+                    _didLoot = true
                 } forEach _targets;
 
-                if (!_looted) exitWith {};
+                if (!_didLoot) exitWith {};
                 sleep 1
             };
 
-            if (call _fnc_cancelled) then {
+            if (!alive _unit) exitWith {};
+            if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime
+                || (_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime
+                || (_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) then {
                 systemChat format ["%1 loot run cancelled", name _unit]
-            } else {
-                systemChat format ["%1 loot run complete", name _unit]
             }
         }
     } forEach _units
 };
 ["loot",
-"Loot an area — collect weapons, gear and items from weapon piles and dead bodies. Unit goes to each pile and collects. If unit is in a vehicle or vehicle is nearby, items go into the vehicle. Triggers: loot this area, go loot, collect gear.",
+"Loot an area — collect weapons, gear and items from weapon piles and dead bodies. If unit is in a vehicle or vehicle is nearby, items go into the vehicle. Triggers: loot this area, go loot, collect gear.",
 "{radius?: number (default 100)}",
 zdoArmaVoice_fnc_commandLoot] call zdoArmaVoice_fnc_coreRegisterCommand

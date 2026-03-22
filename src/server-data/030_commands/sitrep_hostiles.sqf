@@ -1,20 +1,23 @@
 zdoArmaVoice_fnc_commandSitrepHostiles = {
     params ["_args", "_lookAtPosition", "_units"];
     private _allTargets = [];
+    private _seen = [];
+    private _reporter = (_units select 0) call BIS_fnc_objectFromNetId;
+    private _rPos = getPosASL _reporter;
+    private _rDir = getDirVisual _reporter;
     {
         private _u = _x call BIS_fnc_objectFromNetId;
-        private _uPos = getPosASL _u;
-        private _uDir = getDirVisual _u;
         private _known = _u targets [true, 600];
         {
             private _target = _x;
-            if (alive _target) then {
+            if (alive _target && {!(_target in _seen)}) then {
+                _seen pushBack _target;
                 private _tPos = getPosASL _target;
-                private _dist = round (_uPos distance2D _tPos);
-                private _dx = (_tPos select 0) - (_uPos select 0);
-                private _dy = (_tPos select 1) - (_uPos select 1);
+                private _dist = round (_rPos distance2D _tPos);
+                private _dx = (_tPos select 0) - (_rPos select 0);
+                private _dy = (_tPos select 1) - (_rPos select 1);
                 private _bearing = round ((_dx atan2 _dy + 360) mod 360);
-                private _relBearing = round ((_bearing - _uDir + 360) mod 360);
+                private _relBearing = round ((_bearing - _rDir + 360) mod 360);
                 private _typeName = getText (configFile >> "CfgVehicles" >> typeOf _target >> "displayName");
                 if (_typeName == "") then { _typeName = typeOf _target };
                 private _compassDir = switch (true) do {

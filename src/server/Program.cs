@@ -49,6 +49,9 @@ public class Program
         var unitRegistry = new UnitRegistry(rpcClient);
 
         // STT
+        MicHelper.ListDevices();
+        var micDevice = config.Stt.MicDevice;
+
         ISpeechRecognizer? speechRecognizer = null;
         try
         {
@@ -59,13 +62,14 @@ public class Program
                     config.Stt.Deepgram.Model,
                     config.Stt.Deepgram.Language,
                     config.Stt.Deepgram.Encoding,
-                    config.Stt.Deepgram.SampleRate),
+                    config.Stt.Deepgram.SampleRate,
+                    micDevice),
                 #pragma warning disable CA1416
                 "windows" => new WindowsRecognizer(config.Stt.Windows.Language),
                 #pragma warning restore CA1416
-                "google" => new GoogleRecognizer(config.Stt.Google.ApiKey, config.Stt.Google.Language),
-                "azure" => new AzureRecognizer(config.Stt.Azure.SubscriptionKey, config.Stt.Azure.Region, config.Stt.Azure.Language),
-                _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath, config.Stt.Whisper.Language),
+                "google" => new GoogleRecognizer(config.Stt.Google.ApiKey, config.Stt.Google.Language, micDevice),
+                "azure" => new AzureRecognizer(config.Stt.Azure.SubscriptionKey, config.Stt.Azure.Region, config.Stt.Azure.Language, micDevice),
+                _ => new WhisperRecognizer(config.Stt.Whisper.ModelPath, config.Stt.Whisper.Language, micDevice),
             };
             Log.Info("Server", $"STT ({config.Stt.System}) ready.");
         }

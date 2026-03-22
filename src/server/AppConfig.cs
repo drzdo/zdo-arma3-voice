@@ -154,6 +154,8 @@ public class RadioConfig
 public class SttConfig
 {
     public string System { get; set; } = "whisper";
+    /// <summary>Microphone device index. -1 = default. Run server to see device list.</summary>
+    public int MicDevice { get; set; } = -1;
     public WhisperConfig Whisper { get; set; } = new();
     public DeepgramConfig Deepgram { get; set; } = new();
     public WindowsSttConfig Windows { get; set; } = new();

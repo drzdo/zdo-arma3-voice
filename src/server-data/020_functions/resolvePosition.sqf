@@ -57,6 +57,16 @@ zdoArmaVoice_fnc_resolvePosition = {
         case "named": {
             [_spec getOrDefault ["name", ""]] call zdoArmaVoice_fnc_getNamedPos
         };
+        case "unit": {
+            private _ref = _spec getOrDefault ["netId", _spec getOrDefault ["name", ""]];
+            private _target = objNull;
+            if (_ref find ":" >= 0) then {
+                _target = _ref call BIS_fnc_objectFromNetId
+            } else {
+                { if (name _x == _ref) exitWith { _target = _x } } forEach (units group player)
+            };
+            if (!isNull _target) then { getPosATL _target } else { _lookAtPosition }
+        };
         default { _lookAtPosition };
     }
 }
