@@ -15,14 +15,14 @@ public class WhisperRecognizer : ISpeechRecognizer
     private bool _recording;
     private readonly object _lock = new();
 
-    public WhisperRecognizer(string modelPath = "ggml-base.en.bin", string language = "en", int micDevice = -1)
+    public WhisperRecognizer(string modelPath = "ggml-base.en.bin", string language = "en", int micDevice = -1, string micMode = "wasapi")
     {
         var factory = WhisperFactory.FromPath(modelPath);
         _processor = factory.CreateBuilder()
             .WithLanguage(language)
             .Build();
 
-        _waveIn = MicHelper.CreateWaveIn(micDevice);
+        _waveIn = MicHelper.CreateWaveIn(micDevice, micMode);
         _waveIn.DataAvailable += OnDataAvailable;
 
         _audioBuffer = new MemoryStream();

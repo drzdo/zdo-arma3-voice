@@ -101,3 +101,8 @@ All server config in `config.yaml` (gitignored). Template in `config-example.yam
 
 - `.github/workflows/build.yml` — build + artifact upload on push/PR
 - `.github/workflows/release.yml` — build + GitHub Release on tag push (`git tag v0.1.0 && git push --tags`)
+
+### Rules
+
+- When a command is added, changed, or removed in `src/server-data/030_commands/`, update `README.md` to reflect the change.
+- Files starting with `_` in `src/server-data/` are ignored by DataLoader and not loaded.

@@ -16,6 +16,7 @@ audio:
 stt:
   system: whisper  # whisper | deepgram | windows
   mic_device: -1  # -1 = default. Run server to see device list with indices.
+  mic_mode: wasapi  # wasapi (shared mode) or mme (legacy, works alongside OBS)
   whisper:
     model_path: ggml-base.en.bin
     language: en  # en, ru, auto, etc.

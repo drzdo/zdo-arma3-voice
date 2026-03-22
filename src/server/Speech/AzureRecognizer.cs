@@ -18,14 +18,14 @@ public class AzureRecognizer : ISpeechRecognizer
     private bool _recording;
     private readonly object _lock = new();
 
-    public AzureRecognizer(string subscriptionKey, string region, string language = "ru-RU", int micDevice = -1)
+    public AzureRecognizer(string subscriptionKey, string region, string language = "ru-RU", int micDevice = -1, string micMode = "wasapi")
     {
         _region = region;
         _language = language;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _http.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionKey);
 
-        _waveIn = MicHelper.CreateWaveIn(micDevice);
+        _waveIn = MicHelper.CreateWaveIn(micDevice, micMode);
         _waveIn.DataAvailable += OnDataAvailable;
         _audioBuffer = new MemoryStream();
     }

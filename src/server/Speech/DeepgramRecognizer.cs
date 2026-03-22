@@ -27,7 +27,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
     private CancellationTokenSource? _cts;
     private Task? _receiveTask;
 
-    public DeepgramRecognizer(string apiKey, string model, string language, string encoding, int sampleRate, int micDevice = -1)
+    public DeepgramRecognizer(string apiKey, string model, string language, string encoding, int sampleRate, int micDevice = -1, string micMode = "wasapi")
     {
         _apiKey = apiKey;
         _model = model;
@@ -35,7 +35,7 @@ public class DeepgramRecognizer : ISpeechRecognizer
         _encoding = encoding;
         _sampleRate = sampleRate;
 
-        _waveIn = MicHelper.CreateWaveIn(micDevice);
+        _waveIn = MicHelper.CreateWaveIn(micDevice, micMode);
         _waveIn.DataAvailable += OnDataAvailable;
     }
 

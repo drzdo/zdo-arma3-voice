@@ -19,13 +19,13 @@ public class GoogleRecognizer : ISpeechRecognizer
     private bool _recording;
     private readonly object _lock = new();
 
-    public GoogleRecognizer(string apiKey, string language = "ru-RU", int micDevice = -1)
+    public GoogleRecognizer(string apiKey, string language = "ru-RU", int micDevice = -1, string micMode = "wasapi")
     {
         _apiKey = apiKey;
         _language = language;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 
-        _waveIn = MicHelper.CreateWaveIn(micDevice);
+        _waveIn = MicHelper.CreateWaveIn(micDevice, micMode);
         _waveIn.DataAvailable += OnDataAvailable;
         _audioBuffer = new MemoryStream();
     }

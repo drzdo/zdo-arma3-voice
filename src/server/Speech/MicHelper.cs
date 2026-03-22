@@ -16,7 +16,7 @@ public class ResamplingWaveIn : IWaveIn, IDisposable
     public WaveFormat WaveFormat
     {
         get => _targetFormat;
-        set { /* ignore — always 16kHz/16-bit/mono */ }
+        set { }
     }
 
     public event EventHandler<WaveInEventArgs>? DataAvailable;
@@ -65,20 +65,67 @@ public class ResamplingWaveIn : IWaveIn, IDisposable
 
 public static class MicHelper
 {
-    public static void ListDevices()
+    /// <summary>
+    /// mic_mode: "wasapi" (shared, default) or "mme" (legacy, works with OBS)
+    /// </summary>
+    public static void ListDevices(string mode = "wasapi")
     {
-        var enumerator = new MMDeviceEnumerator();
-        var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
-        Log.Info("Mic", $"Audio input devices ({devices.Count}):");
-        for (int i = 0; i < devices.Count; i++)
+        if (mode == "mme")
         {
-            Log.Info("Mic", $"  [{i}] {devices[i].FriendlyName}");
+            var count = WaveInEvent.DeviceCount;
+            Log.Info("Mic", $"MME audio input devices ({count}):");
+            for (int i = 0; i < count; i++)
+            {
+                var caps = WaveInEvent.GetCapabilities(i);
+                Log.Info("Mic", $"  [{i}] {caps.ProductName} (channels: {caps.Channels})");
+            }
+            if (count == 0)
+                Log.Warn("Mic", "No MME audio input devices found!");
         }
-        if (devices.Count == 0)
-            Log.Warn("Mic", "No audio input devices found!");
+        else
+        {
+            var enumerator = new MMDeviceEnumerator();
+            var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
+            Log.Info("Mic", $"WASAPI audio input devices ({devices.Count}):");
+            for (int i = 0; i < devices.Count; i++)
+            {
+                Log.Info("Mic", $"  [{i}] {devices[i].FriendlyName}");
+            }
+            if (devices.Count == 0)
+                Log.Warn("Mic", "No WASAPI audio input devices found!");
+        }
     }
 
-    public static IWaveIn CreateWaveIn(int deviceIndex = -1)
+    public static IWaveIn CreateWaveIn(int deviceIndex = -1, string mode = "wasapi")
+    {
+        if (mode == "mme")
+            return CreateMme(deviceIndex);
+        return CreateWasapi(deviceIndex);
+    }
+
+    private static IWaveIn CreateMme(int deviceIndex)
+    {
+        var waveIn = new WaveInEvent
+        {
+            WaveFormat = new WaveFormat(16000, 16, 1),
+            BufferMilliseconds = 50
+        };
+
+        if (deviceIndex >= 0 && deviceIndex < WaveInEvent.DeviceCount)
+        {
+            waveIn.DeviceNumber = deviceIndex;
+            var caps = WaveInEvent.GetCapabilities(deviceIndex);
+            Log.Info("Mic", $"MME device [{deviceIndex}]: {caps.ProductName}");
+        }
+        else
+        {
+            Log.Info("Mic", "MME default device");
+        }
+
+        return waveIn;
+    }
+
+    private static IWaveIn CreateWasapi(int deviceIndex)
     {
         var enumerator = new MMDeviceEnumerator();
         MMDevice device;
@@ -89,7 +136,7 @@ public static class MicHelper
             if (deviceIndex < devices.Count)
             {
                 device = devices[deviceIndex];
-                Log.Info("Mic", $"Using device [{deviceIndex}]: {device.FriendlyName}");
+                Log.Info("Mic", $"WASAPI device [{deviceIndex}]: {device.FriendlyName}");
             }
             else
             {
@@ -100,7 +147,7 @@ public static class MicHelper
         else
         {
             device = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
-            Log.Info("Mic", $"Using default device: {device.FriendlyName}");
+            Log.Info("Mic", $"WASAPI default device: {device.FriendlyName}");
         }
 
         return new ResamplingWaveIn(device);
