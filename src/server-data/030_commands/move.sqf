@@ -9,6 +9,6 @@ zdoArmaVoice_fnc_commandMove = {
     [_units, "move"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["move",
-"Move units to a position. Triggers: go there, move to that building, 100 meters forward.",
+"Move units to a position. Also used for driving vehicles. Triggers: go there, move to that building, 100 meters forward, drive there, езжай туда.",
 "{position: Position}",
 zdoArmaVoice_fnc_commandMove] call zdoArmaVoice_fnc_coreRegisterCommand
