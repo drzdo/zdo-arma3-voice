@@ -26,6 +26,25 @@ zdo_arma_voice_frameCount = 0;
 [0xC7, [false, false, false]]] call CBA_fnc_addKeybind;
 // Default: Home key, no modifiers
 
+// Direct speak keybind — speak without radio, only nearby units hear
+["ArmaVoice", "zdo_arma_voice_direct", ["Direct Speak", "Hold to speak directly (no radio, nearby units only)"],
+{
+    // Key down
+    private _lookPos = call zdoArmaVoice_fnc_getLookTarget;
+    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
+        ["t", "ptt"], ["dir", "down_direct"], ["pos", _lookPos]
+    ];
+},
+{
+    // Key up
+    private _lookPos = call zdoArmaVoice_fnc_getLookTarget;
+    "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
+        ["t", "ptt"], ["dir", "up_direct"], ["pos", _lookPos]
+    ];
+},
+[0xC7, [false, true, false]]] call CBA_fnc_addKeybind;
+// Default: Ctrl+Home
+
 // Check if extension is loaded
 private _ver = "zdo_arma_voice" callExtension "status";
 if (_ver == "") then {

@@ -1,9 +1,9 @@
-["watch",
-"Order units to watch/face a direction or position. Triggers: watch there, watch south. For cardinal direction use position with type relative and distance=100.",
-"{units: Units, position?: Position}",
-{
-    params ["_args", "_lookAtPosition"];
-    private _units = [_args getOrDefault ["units", ["all"]]] call zdoArmaVoice_fnc_resolveUnits;
+zdoArmaVoice_fnc_commandWatch = {
+    params ["_args", "_lookAtPosition", "_units"];
     private _pos = [_args getOrDefault ["position", "lookAt"], _lookAtPosition] call zdoArmaVoice_fnc_resolvePosition;
-    [_units, _pos] call zdoArmaVoice_fnc_watch
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+    (_units apply { _x call BIS_fnc_objectFromNetId }) commandWatch _pos
+};
+["watch",
+"Order units to watch/face a direction or position. Triggers: watch there, watch south. For cardinal directions use relative position with distance=100.",
+"{position?: Position}",
+zdoArmaVoice_fnc_commandWatch] call zdoArmaVoice_fnc_coreRegisterCommand

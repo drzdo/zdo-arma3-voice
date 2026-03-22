@@ -5,9 +5,10 @@ using ZdoArmaVoice.Server.Game;
 namespace ZdoArmaVoice.Server.Ai;
 
 /// <summary>
-/// Executes parsed commands by calling SQF coreCallCommand.
-/// Handles dialog and ack responses from commands.
+/// Executes parsed intent by calling SQF coreCallCommand for each command.
+/// Units are resolved once (top-level) and passed to every command.
 /// C# is agnostic to command args — just proxies them to SQF.
+/// Returns retry context if a command requests re-parsing with extra info.
 /// </summary>
 public class CommandExecutor
 {
@@ -23,53 +24,83 @@ public class CommandExecutor
         _ackChance = Math.Clamp(ackChance, 0f, 1f);
     }
 
-    public async Task ExecuteAsync(List<ParsedCommand> commands, float[] lookAtPosition)
+    /// <summary>
+    /// Execute all commands. Returns retry context if any command requests it, null otherwise.
+    /// </summary>
+    public async Task<Dictionary<string, bool>?> ExecuteAsync(ParsedIntent intent, float[] lookAtPosition, bool isRadio = true)
     {
-        foreach (var cmd in commands)
+        var unitsSqf = "[" + string.Join(",", intent.Units.Select(u =>
+            int.TryParse(u, out _) ? u : $"\"{u}\"")) + "]";
+        var posStr = FmtPos(lookAtPosition);
+        Dictionary<string, bool>? retryContext = null;
+
+        foreach (var cmd in intent.Commands)
         {
             try
             {
-                Log.Info("Cmd", $"Executing: {cmd.Command}");
+                Log.Info("Cmd", $"Executing: {cmd.Command} units=[{string.Join(",", intent.Units)}]");
 
-                // Build SQF call: [commandId, args (from JSON), lookAtPosition] call coreCallCommand
                 var argsJson = cmd.Args.ValueKind != JsonValueKind.Undefined
                     ? cmd.Args.GetRawText()
                     : "{}";
 
-                // Escape double quotes for SQF string embedding
                 var sqfArgs = argsJson.Replace("\"", "\"\"");
-                var posStr = FmtPos(lookAtPosition);
 
-                var sqf = $"[\"{cmd.Command}\", fromJSON \"{sqfArgs}\", {posStr}] call zdoArmaVoice_fnc_coreCallCommand";
+                var sqf = $"[\"{cmd.Command}\", fromJSON \"{sqfArgs}\", {posStr}, {unitsSqf}] call zdoArmaVoice_fnc_coreCallCommand";
 
                 var resultStr = await _rpc.CallAsync(sqf);
 
-                // Parse result if any
-                HandleCommandResult(cmd.Command, resultStr);
+                var cmdRetry = HandleCommandResult(cmd.Command, resultStr, isRadio);
+                if (cmdRetry != null)
+                {
+                    retryContext ??= new();
+                    foreach (var kv in cmdRetry)
+                        retryContext[kv.Key] = kv.Value;
+                }
             }
             catch (Exception ex)
             {
                 Log.Error("Cmd", $"Error executing {cmd.Command}: {ex.Message}");
             }
         }
+
+        return retryContext;
     }
 
-    private void HandleCommandResult(string commandId, string resultStr)
+    /// <summary>
+    /// Handle command result. Returns retry context if command requests it, null otherwise.
+    /// </summary>
+    private Dictionary<string, bool>? HandleCommandResult(string commandId, string resultStr, bool isRadio)
     {
         if (string.IsNullOrEmpty(resultStr) || resultStr == "null" || resultStr == "nil")
-            return;
+            return null;
 
         try
         {
             using var doc = JsonDocument.Parse(resultStr);
             var root = doc.RootElement;
 
-            if (root.ValueKind != JsonValueKind.Object) return;
+            if (root.ValueKind != JsonValueKind.Object) return null;
+
+            // Handle retry request
+            if (root.TryGetProperty("retryWithContext", out var retryProp) && retryProp.ValueKind == JsonValueKind.Object)
+            {
+                var ctx = new Dictionary<string, bool>();
+                foreach (var prop in retryProp.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind == JsonValueKind.True)
+                        ctx[prop.Name] = true;
+                    else if (prop.Value.ValueKind == JsonValueKind.False)
+                        ctx[prop.Name] = false;
+                }
+                Log.Info("Cmd", $"{commandId}: requested retry with context [{string.Join(",", ctx.Keys)}]");
+                return ctx;
+            }
 
             // Handle dialog response
             if (root.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "dialog")
             {
-                if (_dialogManager == null) { Log.Info("Cmd", $"{commandId}: dialog disabled"); return; }
+                if (_dialogManager == null) { Log.Info("Cmd", $"{commandId}: dialog disabled"); return null; }
 
                 var targetNetId = root.TryGetProperty("targetNetId", out var tn) ? tn.GetString() ?? "" : "";
                 var systemInstructions = root.TryGetProperty("systemInstructions", out var si) ? si.GetString() ?? "" : "";
@@ -77,18 +108,18 @@ public class CommandExecutor
 
                 if (!string.IsNullOrEmpty(systemInstructions))
                 {
-                    _dialogManager.Enqueue(targetNetId, systemInstructions, message);
-                    Log.Info("Cmd", $"{commandId}: dialog queued → {targetNetId}");
+                    _dialogManager.Enqueue(targetNetId, systemInstructions, message, isRadio);
+                    Log.Info("Cmd", $"{commandId}: dialog queued -> {targetNetId} ({(isRadio ? "radio" : "direct")})");
                 }
-                return;
+                return null;
             }
 
             // Handle ack response
             if (root.TryGetProperty("ackSystemInstructions", out var ackSi) &&
                 root.TryGetProperty("ackMessage", out var ackMsg))
             {
-                if (_dialogManager == null || _ackChance <= 0) return;
-                if (_rng.NextSingle() >= _ackChance) return;
+                if (_dialogManager == null || _ackChance <= 0) return null;
+                if (_rng.NextSingle() >= _ackChance) return null;
 
                 var ackSystemInstructions = ackSi.GetString() ?? "";
                 var ackMessage = ackMsg.GetString() ?? "";
@@ -96,8 +127,8 @@ public class CommandExecutor
 
                 if (!string.IsNullOrEmpty(ackSystemInstructions))
                 {
-                    _dialogManager.Enqueue(ackTarget, ackSystemInstructions, ackMessage);
-                    Log.Info("Cmd", $"{commandId}: ack queued");
+                    _dialogManager.Enqueue(ackTarget, ackSystemInstructions, ackMessage, isRadio);
+                    Log.Info("Cmd", $"{commandId}: ack queued ({(isRadio ? "radio" : "direct")})");
                 }
             }
         }
@@ -105,6 +136,8 @@ public class CommandExecutor
         {
             // Result was not JSON — that's fine, many commands return simple values
         }
+
+        return null;
     }
 
     private static string FmtPos(float[] p) => p.Length >= 3

@@ -1,10 +1,18 @@
-["garrison",
-"Order units to garrison/enter the nearest building at look target position. Triggers: garrison that building, enter the building.",
-"{units: Units, position?: Position}",
-{
-    params ["_args", "_lookAtPosition"];
-    private _units = [_args getOrDefault ["units", ["all"]]] call zdoArmaVoice_fnc_resolveUnits;
+zdoArmaVoice_fnc_commandGarrison = {
+    params ["_args", "_lookAtPosition", "_units"];
     private _pos = [_args getOrDefault ["position", "lookAt"], _lookAtPosition] call zdoArmaVoice_fnc_resolvePosition;
-    [_units, _pos] call zdoArmaVoice_fnc_garrison;
+    private _building = nearestObject [_pos, "House"];
+    if (isNull _building) exitWith { systemChat "No building nearby" };
+    private _positions = _building buildingPos -1;
+    if (count _positions == 0) exitWith { systemChat "Building has no positions" };
+    {
+        private _u = _x call BIS_fnc_objectFromNetId;
+        private _idx = _forEachIndex min (count _positions - 1);
+        _u doMove (_positions select _idx)
+    } forEach _units;
     [_units, "garrison"] call zdoArmaVoice_fnc_buildAckInstruction
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+};
+["garrison",
+"Order units to enter the nearest building. Triggers: garrison, enter the building.",
+"{position?: Position}",
+zdoArmaVoice_fnc_commandGarrison] call zdoArmaVoice_fnc_coreRegisterCommand

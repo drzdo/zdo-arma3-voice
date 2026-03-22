@@ -1,11 +1,11 @@
-# ArmaVoice — download latest release to current directory
+# ZdoArmaVoice — download latest release to current directory
 # Usage: powershell -ExecutionPolicy Bypass -File install-latest.ps1
 #
 # Downloads and extracts:
 #   ./@zdo_arma_voice/  — Arma 3 mod (copy to Arma 3 directory)
-#   ./server/      — C# server (exe + commands + functions + config example)
+#   ./server/      — C# server (exe + server-data + config example)
 
-$repo = "drzdo/arma3-mic"
+$repo = "drzdo/zdo-arma3-voice"
 $ErrorActionPreference = "Stop"
 
 Write-Host "Fetching latest release from $repo..."
@@ -15,10 +15,10 @@ Write-Host "Latest release: $tag"
 
 # Find asset URLs
 $modAsset = $release.assets | Where-Object { $_.name -eq "zdo_arma_voice_mod.zip" }
-$serverAsset = $release.assets | Where-Object { $_.name -eq "zdo_arma_voice_server.zip" }
+$serverAsset = $release.assets | Where-Object { $_.name -eq "zdo-arma-voice-server.zip" }
 
 if (-not $modAsset) { Write-Error "zdo_arma_voice_mod.zip not found in release $tag"; exit 1 }
-if (-not $serverAsset) { Write-Error "zdo_arma_voice_server.zip not found in release $tag"; exit 1 }
+if (-not $serverAsset) { Write-Error "zdo-arma-voice-server.zip not found in release $tag"; exit 1 }
 
 # Download mod
 Write-Host "Downloading mod..."
@@ -26,7 +26,7 @@ Invoke-WebRequest -Uri $modAsset.browser_download_url -OutFile "zdo_arma_voice_m
 
 # Download server
 Write-Host "Downloading server..."
-Invoke-WebRequest -Uri $serverAsset.browser_download_url -OutFile "zdo_arma_voice_server.zip"
+Invoke-WebRequest -Uri $serverAsset.browser_download_url -OutFile "zdo-arma-voice-server.zip"
 
 # Extract mod
 Write-Host "Extracting mod..."
@@ -37,7 +37,7 @@ Remove-Item "zdo_arma_voice_mod.zip"
 # Extract server (flatten nested folder from artifact)
 Write-Host "Extracting server..."
 if (Test-Path "server") { Remove-Item -Recurse -Force "server" }
-Expand-Archive "zdo_arma_voice_server.zip" -DestinationPath "server_tmp"
+Expand-Archive "zdo-arma-voice-server.zip" -DestinationPath "server_tmp"
 # Move contents of the inner folder up
 $inner = Get-ChildItem "server_tmp" -Directory | Select-Object -First 1
 if ($inner) {
@@ -46,10 +46,10 @@ if ($inner) {
     Rename-Item "server_tmp" "server"
 }
 if (Test-Path "server_tmp") { Remove-Item -Recurse -Force "server_tmp" }
-Remove-Item "zdo_arma_voice_server.zip"
+Remove-Item "zdo-arma-voice-server.zip"
 
 Write-Host ""
-Write-Host "Done! Installed ArmaVoice $tag"
+Write-Host "Done! Installed ZdoArmaVoice $tag"
 Write-Host "  @zdo_arma_voice/ — copy to your Arma 3 directory"
 Write-Host "  server/     — copy config-example.yaml to config.yaml, edit it, then run:"
-Write-Host "               .\server\ArmaVoice.Server.exe --config .\server\config.yaml"
+Write-Host "               .\server\ZdoArmaVoice.Server.exe --config .\server\config.yaml"

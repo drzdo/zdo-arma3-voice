@@ -113,7 +113,7 @@ public class Program
             var dialogLlm = CreateLlmClient(config.Llm.Dialog);
             var npcDialog = new NpcDialog(dialogLlm);
             dialogManager = new DialogManager(
-                npcDialog, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan, config.Audio.RadioDistance);
+                npcDialog, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan);
             Log.Info("Server", "Dialog ready.");
         }
         else
@@ -146,12 +146,16 @@ public class Program
         {
             Log.Info("PTT", $"{direction} at [{string.Join(", ", lookPos.Select(v => v.ToString("F1")))}]");
 
-            if (direction == "down")
+            var isDown = direction is "down" or "down_direct";
+            var isUp = direction is "up" or "up_direct";
+            var isRadio = direction is "down" or "up";
+
+            if (isDown)
             {
                 speechRecognizer?.StartRecording();
-                Log.Info("Mic", "Recording started...");
+                Log.Info("Mic", $"Recording started ({(isRadio ? "radio" : "direct")})...");
             }
-            else if (direction == "up")
+            else if (isUp)
             {
                 if (speechRecognizer == null)
                 {
@@ -161,6 +165,7 @@ public class Program
 
                 speechRecognizer.StopRecording();
                 Log.Info("Mic", "Recording stopped, transcribing...");
+                var capturedIsRadio = isRadio;
 
                 _ = Task.Run(async () =>
                 {
@@ -175,19 +180,35 @@ public class Program
 
                         Log.Info("Mic", $"Transcript: \"{transcript}\"");
 
-                        // Show transcript in Arma chat
                         rpcClient.Fire($"[\"{transcript.Replace("\"", "\"\"")}\"] call zdoArmaVoice_fnc_coreOnPlayerSay");
 
-                        // Parse intent via SQF prompt + LLM
-                        var result = await intentParser.ParseAsync(transcript);
-                        if (result == null)
-                        {
-                            Log.Warn("Mic", "Could not parse intent.");
-                            return;
-                        }
+                        Dictionary<string, bool>? extraContext = null;
+                        const int maxIterations = 2;
 
-                        var (commands, lookAtPosition) = result.Value;
-                        await commandExecutor.ExecuteAsync(commands, lookAtPosition);
+                        for (int iteration = 0; iteration < maxIterations; iteration++)
+                        {
+                            var result = await intentParser.ParseAsync(transcript, capturedIsRadio, extraContext);
+                            if (result == null)
+                            {
+                                Log.Warn("Mic", "Could not parse intent.");
+                                break;
+                            }
+
+                            var (intent, lookAtPosition, resultIsRadio) = result.Value;
+                            var retryContext = await commandExecutor.ExecuteAsync(intent, lookAtPosition, resultIsRadio);
+
+                            if (retryContext == null || retryContext.Count == 0)
+                                break;
+
+                            if (iteration + 1 >= maxIterations)
+                            {
+                                Log.Warn("Mic", "Max retry iterations reached, stopping.");
+                                break;
+                            }
+
+                            Log.Info("Mic", $"Command requested retry with context: {string.Join(",", retryContext.Keys)}");
+                            extraContext = retryContext;
+                        }
                     }
                     catch (Exception ex)
                     {

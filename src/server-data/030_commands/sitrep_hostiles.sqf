@@ -1,10 +1,29 @@
-["sitrep_hostiles",
-"Report known hostile contacts via voice. Triggers: report contacts, any hostiles, what do you see.",
-"{units: Units}",
-{
-    params ["_args", "_lookAtPosition"];
-    private _units = [_args getOrDefault ["units", ["all"]]] call zdoArmaVoice_fnc_resolveUnits;
-    private _data = [_units] call zdoArmaVoice_fnc_reportHostiles;
+zdoArmaVoice_fnc_commandSitrepHostiles = {
+    params ["_args", "_lookAtPosition", "_units"];
+    private _allTargets = [];
+    {
+        private _u = _x call BIS_fnc_objectFromNetId;
+        private _uPos = getPosASL _u;
+        private _uDir = getDirVisual _u;
+        private _uSide = side _u;
+        private _known = _u targets [true, 600, [], 0];
+        {
+            _x params ["_target", "_lastKnownPos"];
+            private _tSide = side _target;
+            if ([_uSide, _tSide] call BIS_fnc_sideIsEnemy && alive _target) then {
+                private _dist = round (_uPos distance2D _lastKnownPos);
+                private _dx = (_lastKnownPos select 0) - (_uPos select 0);
+                private _dy = (_lastKnownPos select 1) - (_uPos select 1);
+                private _bearing = round ((_dx atan2 _dy + 360) mod 360);
+                private _relBearing = round ((_bearing - _uDir + 360) mod 360);
+                private _typeName = getText (configFile >> "CfgVehicles" >> typeOf _target >> "displayName");
+                if (_typeName == "") then { _typeName = typeOf _target };
+                _allTargets pushBack [_typeName, str _tSide, _dist, _bearing, _relBearing]
+            }
+        } forEach _known
+    } forEach _units;
+    _allTargets sort true;
+    private _data = _allTargets select [0, count _allTargets min 8];
     private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
     private _targetNetId = if (count _units > 0) then { _units select 0 } else { "" };
     private _msg = "[SITREP] Report hostile contacts. "
@@ -19,4 +38,8 @@
         ["systemInstructions", format ["You are a soldier reporting contacts to %1 %2. Stay in character.", _pi select 1, _pi select 0]],
         ["message", _msg]
     ]
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+};
+["sitrep_hostiles",
+"Report known hostile contacts via voice. Triggers: report contacts, any hostiles, what do you see.",
+"{}",
+zdoArmaVoice_fnc_commandSitrepHostiles] call zdoArmaVoice_fnc_coreRegisterCommand

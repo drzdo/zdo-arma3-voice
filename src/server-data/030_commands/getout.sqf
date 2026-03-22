@@ -1,8 +1,11 @@
+zdoArmaVoice_fnc_commandGetout = {
+    params ["_args", "_lookAtPosition", "_units"];
+    {
+        private _u = _x call BIS_fnc_objectFromNetId;
+        if (vehicle _u != _u) then { moveOut _u }
+    } forEach _units
+};
 ["getout",
 "Get out of current vehicle. Triggers: get out, dismount.",
-"{units: Units}",
-{
-    params ["_args", "_lookAtPosition"];
-    private _units = [_args getOrDefault ["units", ["all"]]] call zdoArmaVoice_fnc_resolveUnits;
-    [_units] call zdoArmaVoice_fnc_getOut
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+"{}",
+zdoArmaVoice_fnc_commandGetout] call zdoArmaVoice_fnc_coreRegisterCommand

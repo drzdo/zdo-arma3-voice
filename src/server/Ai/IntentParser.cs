@@ -2,9 +2,6 @@ using System.Text.Json;
 
 namespace ZdoArmaVoice.Server.Ai;
 
-/// <summary>
-/// LLM output: array of commands with args.
-/// </summary>
 public class ParsedCommand
 {
     public string Command { get; set; } = "";
@@ -12,17 +9,24 @@ public class ParsedCommand
 }
 
 /// <summary>
-/// Result from SQF coreIntentPrompt.
+/// Parsed intent: who + what.
 /// </summary>
+public class ParsedIntent
+{
+    public List<string> Units { get; set; } = [];
+    public List<ParsedCommand> Commands { get; set; } = [];
+}
+
 public class IntentPromptResult
 {
     public string SystemInstructions { get; set; } = "";
     public string Message { get; set; } = "";
     public float[] LookAtPosition { get; set; } = [0, 0, 0];
+    public bool IsRadio { get; set; } = true;
 }
 
 /// <summary>
-/// Calls SQF for the intent prompt, sends to LLM, parses response into commands.
+/// Calls SQF for the intent prompt, sends to LLM, parses response.
 /// C# is agnostic to command args — just validates JSON and passes through.
 /// </summary>
 public class IntentParser
@@ -36,18 +40,14 @@ public class IntentParser
         _rpc = rpc;
     }
 
-    /// <summary>
-    /// Get intent prompt from SQF, call LLM, parse response.
-    /// </summary>
-    public async Task<(List<ParsedCommand> Commands, float[] LookAtPosition)?> ParseAsync(string speechText)
+    public async Task<(ParsedIntent Intent, float[] LookAtPosition, bool IsRadio)?> ParseAsync(
+        string speechText, bool isRadio = true, Dictionary<string, bool>? extraContext = null)
     {
         try
         {
-            // 1. Call SQF for prompt + lookAtPosition
-            var promptResult = await GetIntentPromptAsync(speechText);
+            var promptResult = await GetIntentPromptAsync(speechText, isRadio, extraContext);
             if (promptResult == null) return null;
 
-            // 2. Send to LLM
             var messages = new List<LlmMessage> { new("user", promptResult.Message) };
             var textResponse = await _llm.CompleteAsync(
                 promptResult.SystemInstructions, messages, temperature: 0.1f, maxTokens: 500);
@@ -56,21 +56,21 @@ public class IntentParser
 
             var json = StripMarkdownFences(textResponse);
 
-            // 3. Parse response as command array
-            var commands = TryParseCommands(json);
-            if (commands == null)
+            var intent = TryParseIntent(json);
+            if (intent == null)
             {
                 Log.Warn("IntentParser", "Bad JSON from LLM, retrying with fix prompt...");
-                commands = await RetryFixAsync(json);
+                intent = await RetryFixAsync(json);
             }
 
-            if (commands != null)
+            if (intent != null)
             {
-                foreach (var cmd in commands)
+                Log.Info("IntentParser", $"units=[{string.Join(",", intent.Units)}]");
+                foreach (var cmd in intent.Commands)
                     Log.Info("IntentParser", $"  command={cmd.Command} args={cmd.Args}");
             }
 
-            return commands != null ? (commands, promptResult.LookAtPosition) : null;
+            return intent != null ? (intent, promptResult.LookAtPosition, promptResult.IsRadio) : null;
         }
         catch (Exception ex)
         {
@@ -79,39 +79,26 @@ public class IntentParser
         }
     }
 
-    /// <summary>
-    /// Validate a specific command's args against its schema (from SQF).
-    /// If invalid, retry LLM with the schema.
-    /// </summary>
-    public async Task<JsonElement?> ValidateAndRetryArgsAsync(string commandId, JsonElement args, string schema)
-    {
-        // Basic validation: args should be a JSON object
-        if (args.ValueKind == JsonValueKind.Object) return args;
-
-        Log.Warn("IntentParser", $"Args for '{commandId}' are not an object, retrying...");
-        var fixPrompt = $"Fix the args for command '{commandId}'. Expected schema: {schema}\n\nBroken args: {args}\n\nReturn ONLY the fixed JSON object.";
-        var messages = new List<LlmMessage> { new("user", fixPrompt) };
-        var fixedResponse = await _llm.CompleteAsync("Fix JSON args. Return ONLY the fixed JSON object.", messages, temperature: 0f, maxTokens: 300);
-        if (string.IsNullOrEmpty(fixedResponse)) return null;
-
-        try
-        {
-            return JsonDocument.Parse(StripMarkdownFences(fixedResponse)).RootElement.Clone();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<IntentPromptResult?> GetIntentPromptAsync(string speechText)
+    private async Task<IntentPromptResult?> GetIntentPromptAsync(
+        string speechText, bool isRadio, Dictionary<string, bool>? extraContext = null)
     {
         try
         {
             var escaped = speechText.Replace("\"", "\\\"");
-            var result = await _rpc.CallAsync($"[\"{escaped}\"] call zdoArmaVoice_fnc_coreIntentPrompt");
+            var radioStr = isRadio ? "true" : "false";
 
-            // Result is a JSON hashmap from toJSON
+            // Build context hashmap for SQF: createHashMapFromArray [["key",true],...]
+            var contextSqf = "createHashMap";
+            if (extraContext != null && extraContext.Count > 0)
+            {
+                var pairs = string.Join(",", extraContext.Select(kv =>
+                    $"[\"{kv.Key}\",{(kv.Value ? "true" : "false")}]"));
+                contextSqf = $"createHashMapFromArray [{pairs}]";
+            }
+
+            var result = await _rpc.CallAsync(
+                $"[\"{escaped}\", {radioStr}, {contextSqf}] call zdoArmaVoice_fnc_coreIntentPrompt");
+
             using var doc = JsonDocument.Parse(result);
             var root = doc.RootElement;
 
@@ -130,11 +117,14 @@ public class IntentParser
                 }
             }
 
+            var resultIsRadio = !root.TryGetProperty("isRadio", out var radioProp) || radioProp.GetBoolean();
+
             return new IntentPromptResult
             {
                 SystemInstructions = system,
                 Message = message,
-                LookAtPosition = lookAt
+                LookAtPosition = lookAt,
+                IsRadio = resultIsRadio
             };
         }
         catch (Exception ex)
@@ -144,36 +134,53 @@ public class IntentParser
         }
     }
 
-    private static List<ParsedCommand>? TryParseCommands(string json)
+    /// <summary>
+    /// Parse LLM response: {units: [...], commands: [{command, args}]}
+    /// </summary>
+    private static ParsedIntent? TryParseIntent(string json)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            // Handle both array and single object
-            var elements = root.ValueKind == JsonValueKind.Array
-                ? root.EnumerateArray().ToList()
-                : [root];
+            if (root.ValueKind != JsonValueKind.Object) return null;
 
-            var commands = new List<ParsedCommand>();
-            foreach (var el in elements)
+            var intent = new ParsedIntent();
+
+            // Parse units — strings ("netId", "all", "red") or numbers (squad index)
+            if (root.TryGetProperty("units", out var unitsProp) && unitsProp.ValueKind == JsonValueKind.Array)
             {
-                if (el.ValueKind != JsonValueKind.Object) continue;
-                if (!el.TryGetProperty("command", out var cmdProp)) continue;
-
-                var cmd = new ParsedCommand
+                foreach (var u in unitsProp.EnumerateArray())
                 {
-                    Command = cmdProp.GetString() ?? "",
-                    Args = el.TryGetProperty("args", out var argsProp)
-                        ? argsProp.Clone()
-                        : default
-                };
-                if (!string.IsNullOrEmpty(cmd.Command))
-                    commands.Add(cmd);
+                    if (u.ValueKind == JsonValueKind.String)
+                        intent.Units.Add(u.GetString() ?? "");
+                    else if (u.ValueKind == JsonValueKind.Number)
+                        intent.Units.Add(u.GetInt32().ToString());
+                }
             }
 
-            return commands.Count > 0 ? commands : null;
+            // Parse commands
+            if (root.TryGetProperty("commands", out var cmdsProp) && cmdsProp.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in cmdsProp.EnumerateArray())
+                {
+                    if (el.ValueKind != JsonValueKind.Object) continue;
+                    if (!el.TryGetProperty("command", out var cmdProp)) continue;
+
+                    var cmd = new ParsedCommand
+                    {
+                        Command = cmdProp.GetString() ?? "",
+                        Args = el.TryGetProperty("args", out var argsProp)
+                            ? argsProp.Clone()
+                            : default
+                    };
+                    if (!string.IsNullOrEmpty(cmd.Command))
+                        intent.Commands.Add(cmd);
+                }
+            }
+
+            return intent.Commands.Count > 0 ? intent : null;
         }
         catch
         {
@@ -181,10 +188,10 @@ public class IntentParser
         }
     }
 
-    private async Task<List<ParsedCommand>?> RetryFixAsync(string brokenJson)
+    private async Task<ParsedIntent?> RetryFixAsync(string brokenJson)
     {
         var fixPrompt = "The following JSON is malformed. Fix it and return ONLY valid JSON.\n"
-            + "Expected format: [{\"command\":\"...\", \"args\":{...}}]\n\n"
+            + "Expected format: {\"units\":[...], \"commands\":[{\"command\":\"...\", \"args\":{...}}]}\n\n"
             + "Broken JSON:\n" + brokenJson;
 
         try
@@ -196,11 +203,11 @@ public class IntentParser
 
             if (string.IsNullOrEmpty(fixedResponse)) return null;
 
-            var result = TryParseCommands(StripMarkdownFences(fixedResponse));
+            var result = TryParseIntent(StripMarkdownFences(fixedResponse));
             if (result != null)
                 Log.Info("IntentParser", "Retry succeeded.");
             else
-                Log.Warn("IntentParser", $"Retry also failed.");
+                Log.Warn("IntentParser", "Retry also failed.");
 
             return result;
         }

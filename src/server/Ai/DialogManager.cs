@@ -6,12 +6,12 @@ using ZdoArmaVoice.Server.Speech;
 
 namespace ZdoArmaVoice.Server.Ai;
 
-public record DialogRequest(string TargetNetId, string SystemInstructions, string Message);
+public record DialogRequest(string TargetNetId, string SystemInstructions, string Message, bool IsRadio);
 
 /// <summary>
 /// Manages the full NPC dialog lifecycle. One at a time, queued.
-/// - NPC within radioDistance at start of speech → spatial only
-/// - NPC beyond radioDistance → radio effect baked onto audio + spatial
+/// - Radio mode: radio effect applied, full volume
+/// - Direct mode: spatial audio only, distance-attenuated
 /// Spatial positioning updates in real-time during playback.
 /// </summary>
 public class DialogManager
@@ -23,7 +23,6 @@ public class DialogManager
     private readonly GameState _gameState;
     private readonly UnitRegistry _unitRegistry;
     private readonly float _radioPan;
-    private readonly float _radioDistance;
     private readonly Channel<DialogRequest> _queue;
 
     public DialogManager(
@@ -33,8 +32,7 @@ public class DialogManager
         RadioEffect radioEffect,
         GameState gameState,
         UnitRegistry unitRegistry,
-        float radioPan = 0f,
-        float radioDistance = 10f)
+        float radioPan = 0f)
     {
         _npcDialog = npcDialog;
         _tts = tts;
@@ -42,7 +40,6 @@ public class DialogManager
         _radioEffect = radioEffect;
         _gameState = gameState;
         _radioPan = radioPan;
-        _radioDistance = radioDistance;
         _unitRegistry = unitRegistry;
 
         _queue = Channel.CreateUnbounded<DialogRequest>(new UnboundedChannelOptions
@@ -51,10 +48,10 @@ public class DialogManager
         });
     }
 
-    public void Enqueue(string targetNetId, string systemInstructions, string message)
+    public void Enqueue(string targetNetId, string systemInstructions, string message, bool isRadio = true)
     {
-        _queue.Writer.TryWrite(new DialogRequest(targetNetId, systemInstructions, message));
-        Log.Info("DialogManager", $"Enqueued dialog with {targetNetId}");
+        _queue.Writer.TryWrite(new DialogRequest(targetNetId, systemInstructions, message, isRadio));
+        Log.Info("DialogManager", $"Enqueued dialog with {targetNetId} ({(isRadio ? "radio" : "direct")})");
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -92,29 +89,20 @@ public class DialogManager
         var (samples, sampleRate) = ExtractPcm(wavBytes);
         if (samples.Length == 0) { Log.Warn("DialogManager", "PCM extraction failed."); return; }
 
-        // 4. Determine distance at start of speech
-        var playerPos = _gameState.PlayerPos;
-        var npcPos = unit?.Position ?? playerPos;
-        float dx = npcPos[0] - playerPos[0];
-        float dy = npcPos[1] - playerPos[1];
-        float dz = npcPos.Length > 2 && playerPos.Length > 2 ? npcPos[2] - playerPos[2] : 0f;
-        float distance = MathF.Sqrt(dx * dx + dy * dy + dz * dz);
-
-        // 5. If far → apply radio effect
-        var isRadio = distance >= _radioDistance;
-        if (isRadio)
+        // 4. Apply radio effect if radio mode
+        if (request.IsRadio)
         {
-            Log.Info("DialogManager", $"Radio effect (distance: {distance:F1}m)");
+            Log.Info("DialogManager", "Radio effect");
             samples = _radioEffect.ApplyRadioEffect(samples, sampleRate);
         }
         else
         {
-            Log.Info("DialogManager", $"Spatial only (distance: {distance:F1}m)");
+            Log.Info("DialogManager", "Direct/spatial audio");
         }
 
-        // 6. Play through spatial provider
+        // 5. Play through spatial provider
         var spatialProvider = new SpatialSampleProvider(
-            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, isRadio, _radioPan);
+            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, request.IsRadio, _radioPan);
 
         _audioPlayer.Play(spatialProvider);
 

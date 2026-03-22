@@ -130,8 +130,6 @@ public class AudioConfig
     public float RadioPan { get; set; } = 0f;
     /// <summary>Probability (0-1) that a unit will voice-acknowledge a command. 0=never, 1=always.</summary>
     public float AckChance { get; set; } = 0f;
-    /// <summary>Distance threshold (meters) for radio vs spatial audio.</summary>
-    public float RadioDistance { get; set; } = 10f;
     public RadioConfig Radio { get; set; } = new();
 }
 

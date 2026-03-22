@@ -1,12 +1,10 @@
-["getin",
-"Get in the vehicle the player is looking at. Optionally specify role: driver, gunner, commander, cargo (default). Triggers: get in, mount up, get in as driver.",
-"{units: Units, position?: Position, role?: driver/gunner/commander/cargo}",
-{
-    params ["_args", "_lookAtPosition"];
-    private _units = [_args getOrDefault ["units", ["all"]]] call zdoArmaVoice_fnc_resolveUnits;
+zdoArmaVoice_fnc_commandGetin = {
+    params ["_args", "_lookAtPosition", "_units"];
     private _pos = [_args getOrDefault ["position", "lookAt"], _lookAtPosition] call zdoArmaVoice_fnc_resolvePosition;
-    private _veh = [_pos] call zdoArmaVoice_fnc_findVehicleAt;
-    if (isNull _veh) exitWith { systemChat "No vehicle found" };
+    private _veh = nearestObject [_pos, "LandVehicle"];
+    if (isNull _veh || _veh distance2D _pos >= 15) then { _veh = nearestObject [_pos, "Air"] };
+    if (isNull _veh || _veh distance2D _pos >= 15) then { _veh = nearestObject [_pos, "Ship"] };
+    if (isNull _veh || _veh distance2D _pos >= 15) exitWith { systemChat "No vehicle found" };
     private _role = toLower (_args getOrDefault ["role", "cargo"]);
     private _objs = _units apply { _x call BIS_fnc_objectFromNetId };
     {
@@ -17,6 +15,10 @@
             default { _x assignAsCargo _veh };
         }
     } forEach _objs;
-    _objs commandGetIn _veh;
+    _objs orderGetIn true;
     [_units, "getin"] call zdoArmaVoice_fnc_buildAckInstruction
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+};
+["getin",
+"Get in a vehicle. Optionally specify role. Triggers: get in, mount up, get in as driver.",
+"{position?: Position, role?: driver/gunner/commander/cargo}",
+zdoArmaVoice_fnc_commandGetin] call zdoArmaVoice_fnc_coreRegisterCommand

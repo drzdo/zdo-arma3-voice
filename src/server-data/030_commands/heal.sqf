@@ -1,10 +1,10 @@
+zdoArmaVoice_fnc_commandHeal = {
+    params ["_args", "_lookAtPosition", "_units"];
+    { [_x call BIS_fnc_objectFromNetId] call ace_medical_ai_fnc_healSelf } forEach _units
+};
 if (isClass (configFile >> "CfgPatches" >> "ace_medical_ai")) then {
 ["heal",
 "Order units to heal themselves using ACE3 medical AI. Triggers: heal yourself, patch up.",
-"{units: Units}",
-{
-    params ["_args", "_lookAtPosition"];
-    private _units = [_args getOrDefault ["units", ["all"]]] call zdoArmaVoice_fnc_resolveUnits;
-    [_units] call zdoArmaVoice_fnc_heal
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+"{}",
+zdoArmaVoice_fnc_commandHeal] call zdoArmaVoice_fnc_coreRegisterCommand
 }

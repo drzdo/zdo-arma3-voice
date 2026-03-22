@@ -1,8 +1,5 @@
-["dialog",
-"Talk to an NPC conversationally (ask questions, make remarks). ONLY for actual conversation, NOT for giving orders.",
-"{target: netId string of NPC to talk to, text: what the player said}",
-{
-    params ["_args", "_lookAtPosition"];
+zdoArmaVoice_fnc_commandDialog = {
+    params ["_args", "_lookAtPosition", "_units"];
     private _target = _args getOrDefault ["target", ""];
     private _text = _args getOrDefault ["text", ""];
     private _unit = _target call BIS_fnc_objectFromNetId;
@@ -19,4 +16,8 @@
         ]],
         ["message", _text]
     ]
-}] call zdoArmaVoice_fnc_coreRegisterCommand
+};
+["dialog",
+"Talk to an NPC conversationally (ask questions, make remarks). ONLY for actual conversation, NOT for giving orders.",
+"{target: netId string of NPC to talk to, text: what the player said}",
+zdoArmaVoice_fnc_commandDialog] call zdoArmaVoice_fnc_coreRegisterCommand
