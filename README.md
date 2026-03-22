@@ -1,4 +1,4 @@
-# ArmaVoice
+# Zdo Arma Mic
 
 Voice command and NPC dialogue system for Arma 3. Speak commands to control units and talk to NPCs with AI-generated responses and spatial audio.
 
@@ -6,9 +6,9 @@ See [doc/DESIGN-v1.md](doc/DESIGN-v1.md) for full design.
 
 ## Components
 
-- **Extension** (`arma3_mic_x64.dll`) — NativeAOT C# DLL loaded by Arma 3, acts as TCP proxy
-- **Server** (`ArmaVoice.Server`) — local C# app handling speech recognition, LLM intent parsing, NPC dialogue, and TTS with spatial audio
-- **Mod** (`@arma3_mic`) — SQF scripts + CBA settings
+- **Extension** (`zdo_arma_voice_x64.dll`) — NativeAOT C# DLL loaded by Arma 3, acts as TCP proxy
+- **Server** (`ZdoArmaVoice.Server`) — local C# app handling speech recognition, LLM intent parsing, NPC dialogue, and TTS with spatial audio
+- **Mod** (`@zdo_arma_voice`) — SQF scripts + CBA settings
 
 ## Requirements
 
@@ -22,16 +22,16 @@ See [doc/DESIGN-v1.md](doc/DESIGN-v1.md) for full design.
 ## Configuration
 
 ```
-cp config.yaml.example config.yaml
+cp config-example.yaml config.yaml
 ```
 
-Edit `config.yaml` with your settings. See `config.yaml.example` for all options.
+Edit `config.yaml` with your settings. See `config-example.yaml` for all options.
 
 STT and TTS are pluggable — set `system` to choose the backend:
 
 ```yaml
 stt:
-  system: whisper  # or: deepgram
+  system: whisper # or: deepgram
   whisper:
     model_path: ggml-base.en.bin
   deepgram:
@@ -40,7 +40,7 @@ stt:
     language: en
 
 tts:
-  system: piper  # or: elevenlabs
+  system: piper # or: elevenlabs
   piper:
     url: http://localhost:5000
   elevenlabs:
@@ -62,10 +62,10 @@ dotnet build
 ## Run
 
 ```
-dotnet run --project src/ArmaVoice.Server
+dotnet run --project src/ZdoArmaVoice.Server
 ```
 
-Custom config path: `dotnet run --project src/ArmaVoice.Server -- --config /path/to/config.yaml`
+Custom config path: `dotnet run --project src/ZdoArmaVoice.Server -- --config /path/to/config.yaml`
 
 ## Russian language setup
 
@@ -75,7 +75,7 @@ Use the multilingual Whisper model instead of English-only:
 
 ```yaml
 whisper:
-  model_path: ggml-base.bin   # not ggml-base.en.bin
+  model_path: ggml-base.bin # not ggml-base.en.bin
 ```
 
 Download it from https://huggingface.co/ggerganov/whisper.cpp/tree/main
@@ -103,102 +103,102 @@ Hold the PTT key (default: Home) and speak. Works in any language — English, R
 
 ### Movement
 
-| Say | What happens |
-|---|---|
-| "Second, third — move to that building" | Units #2 and #3 move to your crosshair |
-| "Второй, иди туда" | Unit #2 moves to your crosshair |
-| "Everyone, move 100 meters north" | Whole squad moves 100m north of your position |
-| "Red team, move to marker Alpha" | Red team moves to map marker "Alpha" |
-| "Go south" | Last addressed units move 100m south |
-| "Regroup!" / "Ко мне!" | Units return to the player |
-| "Garrison that building" | Units enter and spread across building positions |
+| Say                                     | What happens                                     |
+| --------------------------------------- | ------------------------------------------------ |
+| "Second, third — move to that building" | Units #2 and #3 move to your crosshair           |
+| "Второй, иди туда"                      | Unit #2 moves to your crosshair                  |
+| "Everyone, move 100 meters north"       | Whole squad moves 100m north of your position    |
+| "Red team, move to marker Alpha"        | Red team moves to map marker "Alpha"             |
+| "Go south"                              | Last addressed units move 100m south             |
+| "Regroup!" / "Ко мне!"                  | Units return to the player                       |
+| "Garrison that building"                | Units enter and spread across building positions |
 
 ### Combat
 
-| Say | What happens |
-|---|---|
-| "Attack that guy" / "Огонь по нему" | Squad engages the target |
-| "Open fire" / "Weapons free" | Units set to fire at will |
-| "Hold fire" / "Не стрелять" | Units cease fire |
+| Say                                    | What happens                  |
+| -------------------------------------- | ----------------------------- |
+| "Attack that guy" / "Огонь по нему"    | Squad engages the target      |
+| "Open fire" / "Weapons free"           | Units set to fire at will     |
+| "Hold fire" / "Не стрелять"            | Units cease fire              |
 | "Suppress that position" / "Подавить!" | Suppressive fire at crosshair |
 
 ### Stance & Speed
 
-| Say | What happens |
-|---|---|
+| Say                         | What happens        |
+| --------------------------- | ------------------- |
 | "Hit the dirt!" / "Ложись!" | Everyone goes prone |
-| "Stand up" / "Встань" | Standing stance |
-| "Crouch" / "Присядь" | Crouching stance |
-| "Sprint!" / "Бегом!" | Full speed |
-| "Walk" / "Шагом" | Slow speed |
+| "Stand up" / "Встань"       | Standing stance     |
+| "Crouch" / "Присядь"        | Crouching stance    |
+| "Sprint!" / "Бегом!"        | Full speed          |
+| "Walk" / "Шагом"            | Slow speed          |
 
 ### Behaviour
 
-| Say | What happens |
-|---|---|
+| Say                      | What happens |
+| ------------------------ | ------------ |
 | "Go stealth" / "Скрытно" | Stealth mode |
-| "Stay alert" / "На чеку" | Aware mode |
-| "Combat mode" / "К бою" | Combat mode |
-| "Stand down" / "Вольно" | Safe mode |
+| "Stay alert" / "На чеку" | Aware mode   |
+| "Combat mode" / "К бою"  | Combat mode  |
+| "Stand down" / "Вольно"  | Safe mode    |
 
 ### Stop & Hold
 
-| Say | What happens |
-|---|---|
-| "Stop!" / "Freeze!" / "Стой!" | Cancel current action, stay responsive |
-| "Hold position" / "Держать позицию" | Lock in place until new orders |
+| Say                                 | What happens                           |
+| ----------------------------------- | -------------------------------------- |
+| "Stop!" / "Freeze!" / "Стой!"       | Cancel current action, stay responsive |
+| "Hold position" / "Держать позицию" | Lock in place until new orders         |
 
 ### Formation
 
-| Say | What happens |
-|---|---|
-| "Wedge formation" | Switch to wedge |
+| Say                           | What happens     |
+| ----------------------------- | ---------------- |
+| "Wedge formation"             | Switch to wedge  |
 | "Line" / "Column" / "Diamond" | Other formations |
 
 ### Vehicles
 
-| Say | What happens |
-|---|---|
-| "Get in" / "В машину" | Units enter nearest vehicle at crosshair |
-| "Get in as driver" / "Садись за руль" | Enter as driver |
-| "Get out" / "Из машины" | Dismount current vehicle |
+| Say                                   | What happens                             |
+| ------------------------------------- | ---------------------------------------- |
+| "Get in" / "В машину"                 | Units enter nearest vehicle at crosshair |
+| "Get in as driver" / "Садись за руль" | Enter as driver                          |
+| "Get out" / "Из машины"               | Dismount current vehicle                 |
 
 ### Watch & Look
 
-| Say | What happens |
-|---|---|
-| "Watch there" / "Смотри туда" | Units face the crosshair position |
-| "Look south" / "Наблюдай на юг" | Units look 100m south |
+| Say                             | What happens                      |
+| ------------------------------- | --------------------------------- |
+| "Watch there" / "Смотри туда"   | Units face the crosshair position |
+| "Look south" / "Наблюдай на юг" | Units look 100m south             |
 
 ### Reports (voice response via TTS)
 
-| Say | What happens |
-|---|---|
+| Say                                | What happens                                             |
+| ---------------------------------- | -------------------------------------------------------- |
 | "Report contacts" / "Кого видишь?" | Unit reports known hostiles with type, distance, bearing |
-| "Where are you?" / "Где ты?" | Unit reports position relative to player |
-| "Status report" / "Как дела?" | Unit reports health/wounds |
+| "Where are you?" / "Где ты?"       | Unit reports position relative to player                 |
+| "Status report" / "Как дела?"      | Unit reports health/wounds                               |
 
 ### ACE3 Medical (auto-detected)
 
-| Say | What happens |
-|---|---|
+| Say                            | What happens                         |
+| ------------------------------ | ------------------------------------ |
 | "Heal yourself" / "Перевяжись" | Unit self-heals using ACE medical AI |
-| "Medic!" / "Медик!" | Requests nearest medic |
+| "Medic!" / "Медик!"            | Requests nearest medic               |
 
 ### Dialogue (NPC conversation with TTS voice)
 
-| Say | What happens |
-|---|---|
+| Say                        | What happens                        |
+| -------------------------- | ----------------------------------- |
 | "Miller, what do you see?" | NPC responds in character via voice |
-| "Петрович, что впереди?" | NPC responds in Russian |
+| "Петрович, что впереди?"   | NPC responds in Russian             |
 
 ### Map & Naming
 
-| Say | What happens |
-|---|---|
-| "Mark this as Bravo" / "Отметь Альфа" | Creates map marker at crosshair |
+| Say                                          | What happens                                       |
+| -------------------------------------------- | -------------------------------------------------- |
+| "Mark this as Bravo" / "Отметь Альфа"        | Creates map marker at crosshair                    |
 | "This is vehicle Alpha" / "Это машина Альфа" | Names the object at crosshair for future reference |
-| "Move to vehicle Alpha" | Uses previously named position |
+| "Move to vehicle Alpha"                      | Uses previously named position                     |
 
 ### Targeting shortcuts
 
@@ -218,7 +218,7 @@ Hold the PTT key (default: Home) and speak. Works in any language — English, R
 
 ## Install mod
 
-Copy `@arma3_mic` folder (with the published `arma3_mic_x64.dll` at root) into your Arma 3 directory. Enable in launcher.
+Copy `@zdo_arma_voice` folder (with the published `zdo_arma_voice_x64.dll` at root) into your Arma 3 directory. Enable in launcher.
 
 ## Release
 

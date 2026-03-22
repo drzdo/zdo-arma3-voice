@@ -1,5 +1,0 @@
-id: heal
-description: "Order units to heal themselves using ACE3 medical AI. Triggers: 'heal yourself', 'patch up', 'лечись', 'перевяжись'. Units will use available medical supplies."
-enable_if: "isClass (configFile >> 'CfgPatches' >> 'ace_medical_ai')"
-sqf: |
-  [_units] call zdoArmaMic_fnc_heal;

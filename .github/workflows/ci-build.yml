@@ -31,19 +31,46 @@ jobs:
         run: dotnet build --no-restore -c Release
 
       - name: Publish Extension (NativeAOT)
-        run: dotnet publish src/ArmaVoice.Extension -c Release -r win-x64 -o publish/extension
+        run: dotnet publish src/arma-dll -c Release -r win-x64 -o publish/extension
 
       - name: Publish Server (single exe)
-        run: dotnet publish src/ArmaVoice.Server -c Release -r win-x64 -o publish/server
+        run: dotnet publish src/server -c Release -r win-x64 -o publish/server
 
       - name: Bundle server distribution
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item publish/server/ArmaVoice.Server.exe dist/
-          Copy-Item -Recurse commands dist/commands
-          Copy-Item -Recurse functions dist/functions
-          Copy-Item config.yaml.example dist/config.yaml.example
+          Copy-Item publish/server/ZdoArmaVoice.Server.exe dist/
+          Copy-Item -Recurse src/server-data dist/server-data
+          Copy-Item config-example.yaml dist/config-example.yaml
+
+      - name: Generate HEMTT project.toml from git tag
+        shell: pwsh
+        run: |
+          $tag = git describe --tags --exact-match 2>$null
+          if (-not $tag) { Write-Error "No git tag found on this commit. Tag with vX.Y.Z to build."; exit 1 }
+          if ($tag -match '^v?(\d+)\.(\d+)\.(\d+)') {
+            $major = $Matches[1]; $minor = $Matches[2]; $patch = $Matches[3]
+          } else {
+            Write-Error "Tag '$tag' does not match vMAJOR.MINOR.PATCH"; exit 1
+          }
+          New-Item -ItemType Directory -Force -Path .hemtt | Out-Null
+          @"
+          name = "zdo_arma_voice"
+          prefix = "zdo_arma_voice"
+          author = "drzdo"
+
+          [version]
+          major = $major
+          minor = $minor
+          patch = $patch
+          "@ | Set-Content .hemtt/project.toml
+          Write-Host "Generated project.toml for v$major.$minor.$patch"
+
+      - name: Setup HEMTT addons symlink
+        shell: pwsh
+        run: |
+          New-Item -ItemType Junction -Path addons/zdo_arma_voice -Target src/arma-mod -Force | Out-Null
 
       - name: Download HEMTT
         shell: pwsh
@@ -60,18 +87,18 @@ jobs:
       - name: Package mod
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path package/@arma3_mic/addons
-          Copy-Item publish/extension/arma3_mic_x64.dll package/@arma3_mic/
-          Copy-Item .hemttout/build/addons/*.pbo package/@arma3_mic/addons/
+          New-Item -ItemType Directory -Force -Path package/@zdo_arma_voice/addons
+          Copy-Item publish/extension/zdo_arma_voice_x64.dll package/@zdo_arma_voice/
+          Copy-Item .hemttout/build/addons/*.pbo package/@zdo_arma_voice/addons/
 
       - name: Upload Mod
         uses: actions/upload-artifact@v5
         with:
-          name: arma3_mic_mod
-          path: package/@arma3_mic/
+          name: zdo_arma_voice_mod
+          path: package/@zdo_arma_voice/
 
       - name: Upload Server
         uses: actions/upload-artifact@v5
         with:
-          name: arma3-mic-server
+          name: zdo-arma-voice-server
           path: dist/

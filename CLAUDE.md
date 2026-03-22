@@ -1,16 +1,17 @@
-# ArmaVoice
+# ZdoArmaVoice
 
 ## What this is
 
-Arma 3 voice command + NPC dialogue mod. Player speaks via PTT, C# server handles STT (Whisper), intent parsing (Gemini Flash), NPC dialogue (Claude API), TTS (Piper), and spatial audio (NAudio). The mod is a dumb eval proxy — all logic lives in the C# server.
+Arma 3 voice command + NPC dialog mod. Player speaks via PTT, C# server handles STT (Whisper), intent parsing (Gemini Flash), NPC dialog (Claude API), TTS (Piper), and spatial audio (NAudio). The C# server is SQF-agnostic — all game logic, command definitions, and LLM prompt generation live in SQF data files.
 
 Full design: `doc/DESIGN-v1.md`
 
 ## Architecture
 
-- **ArmaVoice.Extension** (`src/ArmaVoice.Extension/`) — NativeAOT C# DLL loaded by Arma 3 via `callExtension`. TCP client to server. Must compile on Windows (`win-x64`).
-- **ArmaVoice.Server** (`src/ArmaVoice.Server/`) — Console app. TCP listener, speech pipeline, AI, audio. All config from `config.yaml`.
-- **Mod SQF** (`addons/arma3_mic/`) — ~80 lines total. CBA settings, PTT keybind, EachFrame handler, reconnect loop.
+- **Server** (`src/server/`) — C# console app. TCP listener, speech pipeline, LLM client, audio. All config from `config.yaml`. SQF-agnostic — doesn't know about specific commands.
+- **Server Data** (`src/server-data/`) — SQF files defining core functions, shared helpers, and commands. Sent to game on connect.
+- **Arma DLL** (`src/arma-dll/`) — NativeAOT C# DLL loaded by Arma 3 via `callExtension`. TCP client to server. Must compile on Windows (`win-x64`).
+- **Arma Mod** (`src/arma-mod/`) — ~80 lines SQF. CBA settings, PTT keybind, EachFrame handler, reconnect loop. Symlinked from `addons/zdo_arma_voice/` for HEMTT.
 
 ## Build
 
@@ -22,60 +23,66 @@ Builds on macOS (IL only). NativeAOT publish (`dotnet publish`) requires Windows
 
 ## Key technical details
 
+### Data files (`src/server-data/`)
+
+All game logic lives in SQF files under `src/server-data/`. C# loads them on startup and sends them to the game on connect, in alphabetical order by path.
+
+Structure:
+- `src/server-data/000_reset.sqf` — resets registered commands
+- `src/server-data/010_core/*.sqf` — core functions C# expects (coreRegisterCommand, coreCallCommand, coreIntentPrompt, coreGetCommandSchemas)
+- `src/server-data/020_functions/*.sqf` — shared SQF helper functions
+- `src/server-data/030_commands/*.sqf` — command definitions that self-register via `coreRegisterCommand`
+
+### Command system
+
+Commands are defined in SQF and self-register. Each command file:
+1. Defines its function (receives `_args` hashmap + `_lookAtPosition`)
+2. Calls `zdoArmaMic_fnc_coreRegisterCommand` with: id, description, schema, function
+
+The LLM returns `[{"command": "move", "args": {...}}]`. C# is agnostic to args — just proxies them to SQF via `coreCallCommand`.
+
+Commands can return:
+- Nothing (fire and forget)
+- `{type: "dialog", targetNetId, systemInstructions, message}` — triggers dialog LLM + TTS
+- `{ackSystemInstructions, ackMessage}` — triggers voice acknowledgment (subject to `ack_chance`)
+
+### Intent prompt
+
+`zdoArmaMic_fnc_coreIntentPrompt` builds the full LLM prompt in SQF:
+- Gathers game state (player info, squad, markers)
+- Enumerates registered commands with descriptions and schemas
+- Returns hashmap: `{systemInstructions, message, lookAtPosition}`
+
+C# calls this, sends the result to the LLM, and parses the response. Mission context is hardcoded in this function — edit `src/server-data/010_core/coreIntentPrompt.sqf` to change it.
+
 ### SQF gotchas
 
-- **No comments in SQF function files**: The function bodies are sent via `compileFinal '...'` as strings. Both `//` and `/* */` comments break parsing inside compiled strings. Do NOT use any comments in `functions/*.sqf` files.
-- **Operator precedence**: All SQF binary operators evaluate **right-to-left**. Always parenthesize `callExtension` before comparing: `("ext" callExtension "cmd") == "value"`, NOT `"ext" callExtension "cmd" == "value"` (the latter compares first, then passes the bool to callExtension).
+- **Operator precedence**: All SQF binary operators evaluate **right-to-left**. Always parenthesize `callExtension` before comparing: `("ext" callExtension "cmd") == "value"`.
 - **`callExtension` forms**:
   - Simple: `ext callExtension "fn"` → returns String.
   - Array: `ext callExtension ["fn", [arg1, arg2, ...]]` → returns `[result, returnCode, errorCode]`.
-  - **CRITICAL**: The array form syntax is `["function", argumentsArray]` — the second element MUST be an array of arguments. `["fn", singleArg]` is WRONG, must be `["fn", [singleArg]]`. This is the most common mistake.
+  - **CRITICAL**: The array form syntax is `["function", argumentsArray]` — the second element MUST be an array of arguments. `["fn", singleArg]` is WRONG, must be `["fn", [singleArg]]`.
   - All argument elements are auto-converted to strings by the engine.
-- **`callExtension` export names (64-bit)**: Use plain names `RVExtension`, `RVExtensionArgs`, `RVExtensionVersion` — NO underscore prefix, NO `@N` stdcall decoration. Decorated names (`_RVExtension@12`) are 32-bit only.
-- **`callExtension` argument quoting**: SQF wraps string arguments in literal `"` quotes when passing to `RVExtensionArgs`. The C# extension strips these globally in `ReadArgs`. If adding new argument handling, this is already taken care of — args arrive clean.
-- **`compileFinal`**: Compiles SQF once, result is immutable. Used to register server-pushed functions (`arma3_mic_fnc_*`). Re-register on reconnect.
-- **`parseSimpleArray`**: Parses SQF array literals from strings. Used to parse poll responses from extension.
-- **`str`** output for arrays/numbers is close enough to JSON for our protocol. No conversion needed in the extension.
+- **`callExtension` export names (64-bit)**: Use plain names `RVExtension`, `RVExtensionArgs`, `RVExtensionVersion` — NO underscore prefix, NO `@N` stdcall decoration.
+- **`callExtension` argument quoting**: SQF wraps string arguments in literal `"` quotes when passing to `RVExtensionArgs`. The C# extension strips these globally in `ReadArgs`.
+- **`callExtension` provides ~10KB output buffer**. Keep RPC responses small.
 - **Scheduled vs unscheduled**: `EachFrame` handler runs unscheduled (no `sleep`/`waitUntil`). The reconnect loop uses `spawn` (scheduled) for `sleep`.
 
 ### Protocol (TCP, localhost:9500)
 
-Newline-delimited, type-tag prefix:
-- `S|payload` — state (extension → server)
-- `R|id|result` — RPC response (extension → server)
-- `P|down/up|[x,y,z]` — PTT event (extension → server)
-- `C|id|sqf_code` — RPC call (server → extension)
-
-id=0 means fire-and-forget (no response expected).
+Newline-delimited JSON messages with `"t"` (type) field. Uses `toJSON`/`fromJSON` for serialization.
 
 ### NativeAOT
 
 - Extension uses `[UnmanagedCallersOnly]` for Arma 3 exports.
 - `System.Text.Json` with NativeAOT needs source generators (`[JsonSerializable]`). Currently the extension avoids JSON — uses simple string protocol.
-- `callExtension` provides ~10KB output buffer. Keep RPC responses small.
-
-### Function registration
-
-Server pushes `compileFinal` definitions on connect. SQF functions live in `SqfFunctions.cs` as string constants. RPCs then call short `'arg' call arma3_mic_fnc_name` instead of sending full SQF each time.
-
-Registered functions: `getUnitInfo`, `moveUnits`, `attackTarget`, `holdPosition`, `regroup`, `setFormation`, `setStance`, `setSpeed`, `getTeamMembers`.
-
-### Command system (4 dimensions)
-
-Every voice command is parsed by the LLM into:
-- **To whom**: "all", "team_red", "unit 2", name, role
-- **What**: move, attack, hold, regroup, formation, dialogue
-- **How**: stance (prone/crouch/standing) + speed (sprint/run/walk) — modifiers applied alongside any action
-- **Where**: look_target (crosshair/map cursor), relative (100m_forward), cardinal (200m_north), explicit coords
-
-Unit resolution supports: team colors (via SQF RPC), squad index, name fuzzy match, "all". Also supports Russian keywords.
 
 ### Config
 
-All server config in `config.yaml` (gitignored). Template in `config.yaml.example`.
+All server config in `config.yaml` (gitignored). Template in `config-example.yaml`.
 
 **Rules:**
-- Every time a new config field is added, it MUST also be added to `config.yaml.example`.
+- Every time a new config field is added, it MUST also be added to `config-example.yaml`.
 - No default values for API keys, voice IDs, model IDs — these must be set explicitly in config.
 - Config validation runs on startup. Missing required fields cause a clear error and exit.
 
@@ -87,7 +94,7 @@ All server config in `config.yaml` (gitignored). Template in `config.yaml.exampl
 
 ### Deployment
 
-- Mod: `@arma3_mic/arma3_mic_x64.dll` + `@arma3_mic/addons/arma3_mic.pbo`
+- Mod: `@zdo_arma_voice/zdo_arma_voice_x64.dll` + `@zdo_arma_voice/addons/zdo_arma_voice.pbo`
 - Server: standalone console app, same machine
 
 ### CI/CD

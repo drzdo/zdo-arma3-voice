@@ -1,4 +1,0 @@
-id: speed
-description: "Change movement speed. Triggers: 'sprint'/'бегом'/'быстро' (speed=FULL), 'run'/'бег' (speed=NORMAL), 'walk'/'шагом'/'медленно' (speed=LIMITED). LLM must set 'speed' field to FULL/NORMAL/LIMITED."
-sqf: |
-  [_speed] call zdoArmaMic_fnc_setSpeed;

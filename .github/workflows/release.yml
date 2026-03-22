@@ -24,20 +24,20 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path staging | Out-Null
-          Move-Item -LiteralPath "artifacts/arma3_mic_mod" -Destination "staging/@arma3_mic"
+          Move-Item -LiteralPath "artifacts/zdo_arma_voice_mod" -Destination "staging/@zdo_arma_voice"
           Push-Location staging
-          Compress-Archive -LiteralPath "@arma3_mic" -DestinationPath ../arma3_mic_mod.zip
+          Compress-Archive -LiteralPath "@zdo_arma_voice" -DestinationPath ../zdo_arma_voice_mod.zip
           Pop-Location
 
       - name: Package server
         shell: pwsh
         run: |
-          Compress-Archive -LiteralPath "artifacts/arma3-mic-server" -DestinationPath arma3_mic_server.zip
+          Compress-Archive -LiteralPath "artifacts/zdo-arma-voice-server" -DestinationPath zdo_arma_voice_server.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            arma3_mic_mod.zip
-            arma3_mic_server.zip
+            zdo_arma_voice_mod.zip
+            zdo_arma_voice_server.zip

@@ -1,4 +1,0 @@
-id: watch
-description: "Order units to watch/face a direction or position. Triggers: 'watch there', 'look south', 'смотри туда', 'наблюдай'. If player says a cardinal direction like 'watch south', use location type=relative with distance=100 and that direction."
-sqf: |
-  [_units, _pos] call zdoArmaMic_fnc_watch;

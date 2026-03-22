@@ -9,3 +9,7 @@ publish/
 config.yaml
 
 .claude/
+
+# Generated on CI
+.hemtt/
+addons/

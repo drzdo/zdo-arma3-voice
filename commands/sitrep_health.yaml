@@ -1,7 +1,0 @@
-id: sitrep_health
-description: "Report health status via voice. Triggers: 'status report', 'how are you', 'report health', 'как дела', 'доложи о состоянии', 'ранен?'."
-sqf: ""
-prompt_sqf: |
-  private _data = [_units] call zdoArmaMic_fnc_getHealth;
-  private _pi = call zdoArmaMic_fnc_getPlayerInfo;
-  format ["[HEALTH] Report your health to %1 %2. Data: %3. Be brief, natural.", _pi select 1, _pi select 0, _data]

@@ -1,7 +1,0 @@
-id: sitrep_position
-description: "Report unit's position relative to the player via voice. Triggers: 'where are you', 'report position', 'где ты', 'доложи позицию', 'what is your azimuth', 'какой азимут'."
-sqf: ""
-prompt_sqf: |
-  private _data = [_units] call zdoArmaMic_fnc_getUnitPosition;
-  private _pi = call zdoArmaMic_fnc_getPlayerInfo;
-  format ["[POSITION] The player (%1 %2) asked: '%3'. Report your position. Data [name,dist_m,bearing_degrees]: %4. ALWAYS include the numeric bearing/azimuth. Example: '120 meters, bearing 215, south-west'. 1 sentence.", _pi select 1, _pi select 0, _text, _data]

@@ -1,4 +1,0 @@
-id: drop
-description: "Go prone immediately. Triggers: 'hit the dirt', 'get down', 'ложись', 'на землю'."
-sqf: |
-  [_units] call zdoArmaMic_fnc_drop;

@@ -1,4 +1,0 @@
-id: suppress
-description: "Suppressive fire at a position or direction. Triggers: 'suppress that position', 'suppressive fire', 'подавить', 'подавляющий огонь'. Uses look target or relative direction."
-sqf: |
-  [_units, _pos] call zdoArmaMic_fnc_suppress;

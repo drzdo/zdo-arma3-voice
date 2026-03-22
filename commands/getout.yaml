@@ -1,4 +1,0 @@
-id: getout
-description: "Get out of current vehicle. Triggers: 'get out', 'dismount', 'выходи', 'из машины', 'выгружайтесь'."
-sqf: |
-  [_units] call zdoArmaMic_fnc_getOut;

@@ -56,9 +56,9 @@ The mod uses CBA (Community Based Addons) settings framework for in-game configu
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `arma3_mic_serverHost` | STRING | `"127.0.0.1"` | C# server hostname |
-| `arma3_mic_serverPort` | SCALAR | `9500` | C# server port |
-| `arma3_mic_stateInterval` | SCALAR | `3` | Send state every N frames (1 = every frame) |
+| `zdo_arma_voice_serverHost` | STRING | `"127.0.0.1"` | C# server hostname |
+| `zdo_arma_voice_serverPort` | SCALAR | `9500` | C# server port |
+| `zdo_arma_voice_stateInterval` | SCALAR | `3` | Send state every N frames (1 = every frame) |
 
 **Connection behavior:**
 
@@ -71,7 +71,7 @@ The mod uses CBA (Community Based Addons) settings framework for in-game configu
 
 ### 1. C# Extension (NativeAOT DLL)
 
-Arma 3 loads native DLLs via `callExtension`. Using .NET 8+ with `PublishAot = true`, the extension compiles to a native `arma3_mic_x64.dll` with no runtime dependency.
+Arma 3 loads native DLLs via `callExtension`. Using .NET 8+ with `PublishAot = true`, the extension compiles to a native `zdo_arma_voice_x64.dll` with no runtime dependency.
 
 **NativeAOT note:** `System.Text.Json` requires source generators for AOT compatibility — use `[JsonSerializable]` attributes on a `JsonSerializerContext` instead of runtime reflection.
 
@@ -80,8 +80,8 @@ Arma 3 loads native DLLs via `callExtension`. Using .NET 8+ with `PublishAot = t
 | Export | Arma call | Purpose |
 |---|---|---|
 | `RVExtensionVersion` | automatic | Report version string |
-| `RVExtension` | `"arma3_mic" callExtension "poll"` | Simple commands: `poll`, `status` |
-| `RVExtensionArgs` | `"arma3_mic" callExtension ["respond", id, result]` | Parameterized: `state`, `respond`, `connect`, `ptt` |
+| `RVExtension` | `"zdo_arma_voice" callExtension "poll"` | Simple commands: `poll`, `status` |
+| `RVExtensionArgs` | `"zdo_arma_voice" callExtension ["respond", id, result]` | Parameterized: `state`, `respond`, `connect`, `ptt` |
 
 **Internal design:**
 
@@ -102,20 +102,20 @@ Thin glue packed into a `.pbo` addon. The entire SQF side is ~40 lines.
 
 ```sqf
 [
-    "arma3_mic_serverHost", "EDITBOX",
-    "Server Host", "ArmaVoice",
+    "zdo_arma_voice_serverHost", "EDITBOX",
+    "Server Host", "ZdoArmaVoice",
     "127.0.0.1", false
 ] call CBA_fnc_addSetting;
 
 [
-    "arma3_mic_serverPort", "SLIDER",
-    "Server Port", "ArmaVoice",
+    "zdo_arma_voice_serverPort", "SLIDER",
+    "Server Port", "ZdoArmaVoice",
     [1024, 65535, 9500, 0], false
 ] call CBA_fnc_addSetting;
 
 [
-    "arma3_mic_stateInterval", "SLIDER",
-    "State Push Interval (frames)", "ArmaVoice",
+    "zdo_arma_voice_stateInterval", "SLIDER",
+    "State Push Interval (frames)", "ZdoArmaVoice",
     [1, 30, 3, 0], false
 ] call CBA_fnc_addSetting;
 ```
@@ -123,14 +123,14 @@ Thin glue packed into a `.pbo` addon. The entire SQF side is ~40 lines.
 **PTT keybind (registered in init):**
 
 ```sqf
-["ArmaVoice", "arma3_mic_ptt", "Push to Talk", {
+["ZdoArmaVoice", "zdo_arma_voice_ptt", "Push to Talk", {
     // Key down — capture look target, send PTT start
     private _lookPos = if (visibleMap) then {
         screenToWorld getMousePosition
     } else {
         screenToWorld [0.5, 0.5]
     };
-    "arma3_mic" callExtension ["ptt", "down", str _lookPos];
+    "zdo_arma_voice" callExtension ["ptt", "down", str _lookPos];
 }, {
     // Key up — capture look target, send PTT stop
     private _lookPos = if (visibleMap) then {
@@ -138,23 +138,23 @@ Thin glue packed into a `.pbo` addon. The entire SQF side is ~40 lines.
     } else {
         screenToWorld [0.5, 0.5]
     };
-    "arma3_mic" callExtension ["ptt", "up", str _lookPos];
+    "zdo_arma_voice" callExtension ["ptt", "up", str _lookPos];
 }] call CBA_fnc_addKeybind;
 ```
 
 **Per-frame handler — state push + RPC poll:**
 
 ```sqf
-arma3_mic_frameCount = 0;
+zdo_arma_voice_frameCount = 0;
 
 addMissionEventHandler ["EachFrame", {
     // Check connection
-    if ("arma3_mic" callExtension "status" == "0") exitWith {};
+    if ("zdo_arma_voice" callExtension "status" == "0") exitWith {};
 
     // Throttled state push (every N frames, configurable via CBA)
-    arma3_mic_frameCount = arma3_mic_frameCount + 1;
-    if (arma3_mic_frameCount >= arma3_mic_stateInterval) then {
-        arma3_mic_frameCount = 0;
+    zdo_arma_voice_frameCount = zdo_arma_voice_frameCount + 1;
+    if (zdo_arma_voice_frameCount >= zdo_arma_voice_stateInterval) then {
+        zdo_arma_voice_frameCount = 0;
 
         private _pos = getPosASL player;
         private _dir = getDirVisual player;
@@ -164,18 +164,18 @@ addMissionEventHandler ["EachFrame", {
         private _units = _nearby apply {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
-        "arma3_mic" callExtension ["state", str [_pos, _dir, _units]];
+        "zdo_arma_voice" callExtension ["state", str [_pos, _dir, _units]];
     };
 
     // Poll for inbound RPC (every frame — must stay responsive)
-    private _cmd = "arma3_mic" callExtension "poll";
+    private _cmd = "zdo_arma_voice" callExtension "poll";
     if (_cmd != "") then {
         (parseSimpleArray _cmd) params ["_id", "_sqf"];
         private _result = "";
         _result = [_sqf] call {
             call compile (_this select 0)
         };
-        "arma3_mic" callExtension ["respond", _id, str _result];
+        "zdo_arma_voice" callExtension ["respond", _id, str _result];
     };
 }];
 ```
@@ -185,12 +185,12 @@ addMissionEventHandler ["EachFrame", {
 ```sqf
 [] spawn {
     while {true} do {
-        if ("arma3_mic" callExtension "status" == "0") then {
-            "arma3_mic" callExtension [
+        if ("zdo_arma_voice" callExtension "status" == "0") then {
+            "zdo_arma_voice" callExtension [
                 "connect",
-                arma3_mic_serverHost + ":" + str (round arma3_mic_serverPort)
+                zdo_arma_voice_serverHost + ":" + str (round zdo_arma_voice_serverPort)
             ];
-            systemChat "ArmaVoice: connecting...";
+            systemChat "ZdoArmaVoice: connecting...";
         };
         sleep 10;
     };
@@ -234,8 +234,8 @@ P|up|[3055,5022,0]
 **Examples:**
 
 ```
-C|10|'2:3' call arma3_mic_fnc_getUnitInfo
-C|11|[['2:3','2:7'], [3050,5020,0]] call arma3_mic_fnc_moveUnits
+C|10|'2:3' call zdo_arma_voice_fnc_getUnitInfo
+C|11|[['2:3','2:7'], [3050,5020,0]] call zdo_arma_voice_fnc_moveUnits
 ```
 
 The extension queues inbound `C` messages. When SQF calls `poll`, it gets `[id, sqf_code]` as a parseable array.
@@ -251,16 +251,16 @@ To avoid repeatedly compiling the same SQF code, the server registers reusable f
 **On connect, server sends:**
 
 ```
-C|0|arma3_mic_fnc_getUnitInfo = compileFinal 'params ["_netId"]; private _unit = objectFromNetId _netId; str [name _unit, str side _unit, group _unit == group player, typeOf _unit, rankId _unit]'
-C|0|arma3_mic_fnc_moveUnits = compileFinal 'params ["_netIds", "_pos"]; { (objectFromNetId _x) doMove _pos } forEach _netIds; "ok"'
-C|0|arma3_mic_fnc_lookTarget = compileFinal 'if (visibleMap) then { str (screenToWorld getMousePosition) } else { str (screenToWorld [0.5, 0.5]) }'
+C|0|zdo_arma_voice_fnc_getUnitInfo = compileFinal 'params ["_netId"]; private _unit = objectFromNetId _netId; str [name _unit, str side _unit, group _unit == group player, typeOf _unit, rankId _unit]'
+C|0|zdo_arma_voice_fnc_moveUnits = compileFinal 'params ["_netIds", "_pos"]; { (objectFromNetId _x) doMove _pos } forEach _netIds; "ok"'
+C|0|zdo_arma_voice_fnc_lookTarget = compileFinal 'if (visibleMap) then { str (screenToWorld getMousePosition) } else { str (screenToWorld [0.5, 0.5]) }'
 ```
 
 **Then subsequent RPCs are short:**
 
 ```
-C|10|'2:3' call arma3_mic_fnc_getUnitInfo
-C|11|[['2:3','2:7'], [3050,5020,0]] call arma3_mic_fnc_moveUnits
+C|10|'2:3' call zdo_arma_voice_fnc_getUnitInfo
+C|11|[['2:3','2:7'], [3050,5020,0]] call zdo_arma_voice_fnc_moveUnits
 ```
 
 `compileFinal` compiles once and prevents recompilation. The server re-registers on reconnect. Function definitions live in `SqfFunctions.cs` on the server side — the mod stays dumb.
@@ -273,7 +273,7 @@ The server maintains a `UnitRegistry` — a dictionary of `netId → UnitInfo`.
 
 ```
 Frame arrives with netId "2:3":
-  → First seen?  → fire RPCs: '2:3' call arma3_mic_fnc_getUnitInfo → cache result
+  → First seen?  → fire RPCs: '2:3' call zdo_arma_voice_fnc_getUnitInfo → cache result
   → Known?       → update position only
   → Missing for N frames? → evict from cache
 ```
@@ -321,7 +321,7 @@ Player speaks (PTT held): "unit 1 and 2 move to that building"
     - "look_target" → [3050, 5020, 0]
   │
   ▼ Sends RPC:
-  C|0|[['2:3','2:7'], [3050,5020,0]] call arma3_mic_fnc_moveUnits
+  C|0|[['2:3','2:7'], [3050,5020,0]] call zdo_arma_voice_fnc_moveUnits
 ```
 
 The LLM-based intent parser handles natural language flexibly — "Miller and the medic, move up to that building" works because the LLM sees the full unit registry as context.
@@ -395,16 +395,16 @@ No spatial processing. Instead:
 
 ```
 arma3-mic/
-├── ArmaVoice.sln
+├── ZdoArmaVoice.sln
 ├── src/
-│   ├── ArmaVoice.Extension/        # NativeAOT → arma3_mic_x64.dll
-│   │   ├── ArmaVoice.Extension.csproj
+│   ├── ZdoArmaVoice.Extension/        # NativeAOT → zdo_arma_voice_x64.dll
+│   │   ├── ZdoArmaVoice.Extension.csproj
 │   │   ├── Exports.cs               # RVExtension* exports
 │   │   ├── TcpClient.cs             # background TCP connection
 │   │   └── CommandQueue.cs          # thread-safe inbound/outbound queues
 │   │
-│   └── ArmaVoice.Server/           # Console app
-│       ├── ArmaVoice.Server.csproj
+│   └── ZdoArmaVoice.Server/           # Console app
+│       ├── ZdoArmaVoice.Server.csproj
 │       ├── Program.cs
 │       ├── Net/
 │       │   └── TcpBridge.cs         # TCP listener, protocol handling
@@ -426,9 +426,9 @@ arma3-mic/
 │           ├── NpcDialogue.cs        # Claude API — context + prompt → NPC response
 │           └── CommandExecutor.cs    # intent → SQF via RpcClient (action dispatch)
 │
-├── mod/                             # @arma3_mic (Arma 3 mod folder)
+├── mod/                             # @zdo_arma_voice (Arma 3 mod folder)
 │   └── addons/
-│       └── arma3_mic/
+│       └── zdo_arma_voice/
 │           ├── config.cpp            # CfgPatches, CfgFunctions
 │           ├── cba_settings.sqf      # CBA settings definitions (host, port, interval)
 │           └── fn_init.sqf           # keybind, connect loop, EachFrame handler
@@ -440,10 +440,10 @@ arma3-mic/
 ## Deployment
 
 ```
-@arma3_mic/                          # drop into Arma 3 directory, enable in launcher
-├── arma3_mic_x64.dll                # compiled extension (NativeAOT output)
+@zdo_arma_voice/                          # drop into Arma 3 directory, enable in launcher
+├── zdo_arma_voice_x64.dll                # compiled extension (NativeAOT output)
 └── addons/
-    └── arma3_mic.pbo                # packed SQF scripts
+    └── zdo_arma_voice.pbo                # packed SQF scripts
 ```
 
 The C# server runs separately as a console app on the same machine.
