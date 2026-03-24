@@ -44,7 +44,7 @@ if (Test-Path "server") {
     # Remove only known server-data folders, preserve custom ones (e.g. 040_*)
     $knownDataDirs = @("000_reset.sqf", "010_core", "020_functions", "030_commands")
     foreach ($d in $knownDataDirs) {
-        $target = Join-Path "server" "server-data" $d
+        $target = Join-Path (Join-Path "server" "server-data") $d
         if (Test-Path $target) { Remove-Item -Recurse -Force $target }
     }
     # Copy new files over existing server dir (overwrite binaries, configs, etc.)
