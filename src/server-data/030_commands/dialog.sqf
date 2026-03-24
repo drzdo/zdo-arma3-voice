@@ -6,7 +6,7 @@ zdoArmaVoice_fnc_commandDialog = {
     private _unitName = if (!isNull _unit) then { name _unit } else { "Soldier" };
     private _unitRole = if (!isNull _unit) then { typeOf _unit } else { "Infantry" };
     private _unitSide = if (!isNull _unit) then { str side _unit } else { "UNKNOWN" };
-    private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
+    private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
     createHashMapFromArray [
         ["type", "dialog"],
         ["targetNetId", _target],

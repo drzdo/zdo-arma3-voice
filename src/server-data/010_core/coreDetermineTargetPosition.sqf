@@ -1,4 +1,4 @@
-zdoArmaVoice_fnc_determineTargetPosition = {
+zdoArmaVoice_fnc_coreDetermineTargetPosition = {
 if (visibleMap) exitWith {
     private _map = findDisplay 12;
     private _ctrlMap = _map displayCtrl 51;

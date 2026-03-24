@@ -13,7 +13,7 @@ zdoArmaVoice_fnc_commandSitrepPosition = {
         private _bearing = round (((_dx atan2 _dy + 360) mod 360) / 5) * 5;
         _results pushBack [name _u, _roundedDist, _bearing]
     } forEach _units;
-    private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
+    private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
     private _targetNetId = if (count _units > 0) then { _units select 0 } else { "" };
     createHashMapFromArray [
         ["type", "dialog"],

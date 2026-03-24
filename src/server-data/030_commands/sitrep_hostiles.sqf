@@ -36,7 +36,7 @@ zdoArmaVoice_fnc_commandSitrepHostiles = {
             }
         } forEach _known
     } forEach _units;
-    private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
+    private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
     private _targetNetId = if (count _units > 0) then { _units select 0 } else { "" };
     private _unitName = name (_targetNetId call BIS_fnc_objectFromNetId);
     private _personality = [_targetNetId] call zdoArmaVoice_fnc_coreUnitPersonality;

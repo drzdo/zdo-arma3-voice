@@ -1,4 +1,4 @@
-zdoArmaVoice_fnc_filterAlive = {
+zdoArmaVoice_fnc_coreFilterAlive = {
 params ["_netIds"];
 _netIds select {
     private _u = _x call BIS_fnc_objectFromNetId;

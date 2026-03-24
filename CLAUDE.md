@@ -106,3 +106,4 @@ All server config in `config.yaml` (gitignored). Template in `config-example.yam
 
 - When a command is added, changed, or removed in `src/server-data/030_commands/`, update `README.md` to reflect the change.
 - Files starting with `_` in `src/server-data/` are ignored by DataLoader and not loaded.
+- Core functions (`010_core/`) must NOT call non-core functions (`020_functions/`). Files load in alphabetical order by path, so core loads before functions. If a core function needs a helper, move that helper to `010_core/` with a `core` prefix.

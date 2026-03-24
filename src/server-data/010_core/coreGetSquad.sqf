@@ -1,4 +1,4 @@
-zdoArmaVoice_fnc_getSquad = {
+zdoArmaVoice_fnc_coreGetSquad = {
 private _all = units group player;
 private _result = [];
 {

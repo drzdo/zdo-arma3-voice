@@ -1,10 +1,10 @@
 zdoArmaVoice_fnc_coreIntentPrompt = {
     params ["_playerText", ["_isRadio", true], ["_extraContext", createHashMap]];
 
-    private _lookAtPos = call zdoArmaVoice_fnc_determineTargetPosition;
+    private _lookAtPos = call zdoArmaVoice_fnc_coreDetermineTargetPosition;
     private _playerPos = getPosATL player;
 
-    private _squad = call zdoArmaVoice_fnc_getSquad;
+    private _squad = call zdoArmaVoice_fnc_coreGetSquad;
     private _filteredSquad = if (_isRadio) then {
         _squad
     } else {
@@ -21,11 +21,11 @@ zdoArmaVoice_fnc_coreIntentPrompt = {
         _squadContext = _squadContext + format ["  #%1 netId=%2 name=%3 type=%4 team=%5", _idx, str _netId, str _name, _type, _team] + toString [10]
     } forEach _filteredSquad;
 
-    private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
+    private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
     private _playerName = _pi select 0;
     private _playerRank = _pi select 1;
 
-    private _markers = call zdoArmaVoice_fnc_getMarkers;
+    private _markers = call zdoArmaVoice_fnc_coreGetMarkers;
     private _markerContext = "";
     if (count _markers > 0) then {
         _markerContext = "  Map markers [id, displayName]: " + str _markers + " (use displayName for marker references)" + toString [10]
@@ -135,7 +135,8 @@ zdoArmaVoice_fnc_coreIntentPrompt = {
         + "- Return ONLY valid JSON. No markdown, no explanation." + _nl
         + "- Prefer netIds over names." + _nl
         + "- ""dialog"" is ONLY for conversation/questions, NEVER for giving orders." + _nl
-        + "- Command args should NOT contain ""units"" — units are top-level.";
+        + "- Command args should NOT contain ""units"" — units are top-level." + _nl
+        + "- ""run"" implies urgency — always add stance UP + speed FULL alongside the move/regroup command.";
 
     createHashMapFromArray [
         ["systemInstructions", _system],

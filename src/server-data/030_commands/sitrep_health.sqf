@@ -30,7 +30,7 @@ zdoArmaVoice_fnc_commandSitrepHealth = {
         _reports pushBack _report
     } forEach _units;
     private _data = _reports joinString " ";
-    private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
+    private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
     private _targetNetId = if (count _units > 0) then { _units select 0 } else { "" };
     createHashMapFromArray [
         ["type", "dialog"],

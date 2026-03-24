@@ -22,7 +22,7 @@ zdoArmaVoice_fnc_coreResolveToWhom = {
                     _result = +zdoArmaVoice_lastAddressedUnits
                 } else {
                     if (_x isEqualType "" && {toUpper _x in ["RED","GREEN","BLUE","YELLOW","WHITE"]}) then {
-                        _result append ([toUpper _x] call zdoArmaVoice_fnc_getTeamMembers)
+                        _result append ([toUpper _x] call zdoArmaVoice_fnc_coreGetTeamMembers)
                     } else {
                         _result pushBack _x
                     }
@@ -30,7 +30,7 @@ zdoArmaVoice_fnc_coreResolveToWhom = {
             }
         }
     } forEach _refs;
-    _result = [_result] call zdoArmaVoice_fnc_filterAlive;
+    _result = [_result] call zdoArmaVoice_fnc_coreFilterAlive;
     if (count _result > 0) then { zdoArmaVoice_lastAddressedUnits = _result };
     _result
 }

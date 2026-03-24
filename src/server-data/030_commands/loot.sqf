@@ -21,10 +21,7 @@ zdoArmaVoice_fnc_commandLoot = {
             systemChat format ["%1 starting loot run%2", name _unit, if (_hasStorage) then { format [" (storage: %1)", typeOf _storage] } else { " (on self)" }];
 
             while {true} do {
-                if (!alive _unit) exitWith {};
-                if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime) exitWith {};
-                if ((_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime) exitWith {};
-                if ((_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) exitWith {};
+                if ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) exitWith {};
 
                 private _weaponPiles = _center nearObjects ["WeaponHolderSimulated", _radius];
                 _weaponPiles append (_center nearObjects ["WeaponHolder", _radius]);
@@ -41,27 +38,18 @@ zdoArmaVoice_fnc_commandLoot = {
                 private _didLoot = false;
                 {
                     private _tgt = _x;
-                    if (!alive _unit) exitWith {};
-                    if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime) exitWith {};
-                    if ((_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime) exitWith {};
-                    if ((_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) exitWith {};
+                    if ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) exitWith {};
 
                     _unit doMove (getPos _tgt);
                     private _timeout = time + 30;
                     waitUntil {
                         sleep 1;
-                        !alive _unit
-                        || { (_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime }
-                        || { (_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime }
-                        || { (_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime }
+                        ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand)
                         || { _unit distance _tgt < 4 }
                         || { time > _timeout }
                     };
 
-                    if (!alive _unit) exitWith {};
-                    if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime) exitWith {};
-                    if ((_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime) exitWith {};
-                    if ((_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) exitWith {};
+                    if ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) exitWith {};
                     if (_unit distance _tgt >= 4) then { continue };
 
                     if (_tgt isKindOf "Man") then {
@@ -117,10 +105,7 @@ zdoArmaVoice_fnc_commandLoot = {
                 sleep 1
             };
 
-            if (!alive _unit) exitWith {};
-            if ((_unit getVariable ["zdoArmaVoice_toldStopAt", 0]) > _startTime
-                || (_unit getVariable ["zdoArmaVoice_toldRegroupAt", 0]) > _startTime
-                || (_unit getVariable ["zdoArmaVoice_toldMoveAt", 0]) > _startTime) then {
+            if ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) then {
                 systemChat format ["%1 loot run cancelled", name _unit]
             }
         }

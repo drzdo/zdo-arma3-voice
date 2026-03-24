@@ -3,7 +3,7 @@ zdoArmaVoice_fnc_buildAckInstruction = {
     private _unit = (_unitNetIds select 0) call BIS_fnc_objectFromNetId;
     private _unitName = name _unit;
     private _unitRole = typeOf _unit;
-    private _pi = call zdoArmaVoice_fnc_getPlayerInfo;
+    private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
     private _playerName = _pi select 0;
     private _playerRank = _pi select 1;
     createHashMapFromArray [
