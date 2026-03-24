@@ -39,6 +39,15 @@ public class IntentParser
     {
         try
         {
+            // 0. Try dumb (local) match first — no LLM needed
+            var dumbResult = await TryDumbLlmAsync(speechText);
+            if (dumbResult != null)
+            {
+                Log.Info("Intent", $"DumbLLM matched: units=[{string.Join(",", dumbResult.Units)}] commands=[{string.Join(",", dumbResult.Commands.Select(c => c.Command))}]");
+                var dumbLookAt = await GetLookAtPositionAsync();
+                return (dumbResult, dumbLookAt, isRadio);
+            }
+
             // 1. Get prompt from SQF
             var promptResult = await GetIntentPromptAsync(speechText, isRadio, extraContext);
             if (promptResult == null) return null;
@@ -219,6 +228,38 @@ public class IntentParser
             Log.Error("LLM", $"JSON fix error: {ex.Message}");
             return null;
         }
+    }
+
+    private async Task<ParsedIntent?> TryDumbLlmAsync(string speechText)
+    {
+        try
+        {
+            var escaped = speechText.Replace("\"", "\\\"");
+            var result = await _rpc.CallAsync($"[\"{escaped}\"] call zdoArmaVoice_fnc_coreDumbLlm");
+            if (string.IsNullOrEmpty(result) || result == "null" || result == "nil" || result == "any")
+                return null;
+
+            Log.Info("DumbLLM", $"Matched: {result}");
+            return TryParseIntent(result);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<float[]> GetLookAtPositionAsync()
+    {
+        try
+        {
+            var result = await _rpc.CallAsync("call zdoArmaVoice_fnc_coreDetermineTargetPosition");
+            using var doc = JsonDocument.Parse(result);
+            var arr = doc.RootElement.EnumerateArray().ToArray();
+            if (arr.Length >= 2)
+                return [arr[0].GetSingle(), arr[1].GetSingle(), arr.Length >= 3 ? arr[2].GetSingle() : 0f];
+        }
+        catch { }
+        return [0f, 0f, 0f];
     }
 
     private static string StripMarkdownFences(string text)

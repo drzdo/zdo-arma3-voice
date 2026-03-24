@@ -36,15 +36,23 @@ Remove-Item "zdo_arma_voice_mod.zip"
 
 # Extract server (flatten nested folder from artifact)
 Write-Host "Extracting server..."
-if (Test-Path "server") { Remove-Item -Recurse -Force "server" }
-Expand-Archive "zdo_arma_voice_server.zip" -DestinationPath "server_tmp"
-# Move contents of the inner folder up
+Expand-Archive "zdo_arma_voice_server.zip" -DestinationPath "server_tmp" -Force
 $inner = Get-ChildItem "server_tmp" -Directory | Select-Object -First 1
-if ($inner) {
-    Move-Item -LiteralPath $inner.FullName -Destination "server"
+$srcDir = if ($inner) { $inner.FullName } else { "server_tmp" }
+
+if (Test-Path "server") {
+    # Remove only known server-data folders, preserve custom ones (e.g. 040_*)
+    $knownDataDirs = @("000_reset.sqf", "010_core", "020_functions", "030_commands")
+    foreach ($d in $knownDataDirs) {
+        $target = Join-Path "server" "server-data" $d
+        if (Test-Path $target) { Remove-Item -Recurse -Force $target }
+    }
+    # Copy new files over existing server dir (overwrite binaries, configs, etc.)
+    Copy-Item -Path "$srcDir\*" -Destination "server" -Recurse -Force
 } else {
-    Rename-Item "server_tmp" "server"
+    Move-Item -LiteralPath $srcDir -Destination "server"
 }
+
 if (Test-Path "server_tmp") { Remove-Item -Recurse -Force "server_tmp" }
 Remove-Item "zdo_arma_voice_server.zip"
 

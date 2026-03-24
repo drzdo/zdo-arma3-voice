@@ -8,10 +8,16 @@ zdoArmaVoice_fnc_commandMirrorstance = {
             private _startTime = time;
             private _lastStance = "";
             while {
-                alive _unit
+                !([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand)
                 && { (_unit getVariable ["zdoArmaVoice_toldStanceAt", 0]) <= _startTime }
             } do {
-                private _playerStance = unitPos player;
+                private _s = stance player;
+                private _playerStance = switch (_s) do {
+                    case "STAND": { "UP" };
+                    case "CROUCH": { "MIDDLE" };
+                    case "PRONE": { "DOWN" };
+                    default { "AUTO" };
+                };
                 if (_playerStance != _lastStance) then {
                     _unit setUnitPos _playerStance;
                     _lastStance = _playerStance

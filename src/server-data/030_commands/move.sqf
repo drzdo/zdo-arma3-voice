@@ -16,7 +16,12 @@ zdoArmaVoice_fnc_commandMove = {
             (_pos select 1) + _offset * cos _perpBearing,
             _pos select 2
         ];
-        _u doMove _unitPos;
+        private _veh = vehicle _u;
+        if (_veh != _u && {driver _veh == _u}) then {
+            _veh doMove _unitPos
+        } else {
+            _u doMove _unitPos
+        };
         _u setVariable ["zdoArmaVoice_toldMoveAt", time]
     } forEach _units;
     [_units, "move"] call zdoArmaVoice_fnc_buildAckInstruction
