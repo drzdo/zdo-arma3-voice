@@ -35,14 +35,14 @@ zdoArmaVoice_fnc_resolvePosition = {
                 case "north-north-west": { 337.5 };
                 default { _playerDir };
             };
-            private _rad = _bearing * pi / 180;
-            [(_pos select 0) + _distance * sin _rad, (_pos select 1) + _distance * cos _rad, _pos select 2]
+            private _result = [(_pos select 0) + _distance * sin _bearing, (_pos select 1) + _distance * cos _bearing, _pos select 2];
+            _result
         };
         case "azimuth": {
             private _distance = _spec getOrDefault ["distance", 100];
-            private _rad = (_spec getOrDefault ["bearing", 0]) * pi / 180;
+            private _bearing = _spec getOrDefault ["bearing", 0];
             private _pos = getPosATL player;
-            [(_pos select 0) + _distance * sin _rad, (_pos select 1) + _distance * cos _rad, _pos select 2]
+            [(_pos select 0) + _distance * sin _bearing, (_pos select 1) + _distance * cos _bearing, _pos select 2]
         };
         case "marker": {
             private _markerQuery = _spec getOrDefault ["marker", ""];

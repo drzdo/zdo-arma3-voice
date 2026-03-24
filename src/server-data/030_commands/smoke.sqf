@@ -24,10 +24,9 @@ zdoArmaVoice_fnc_commandSmoke = {
             _u removeMagazine _toThrow;
             private _pos = getPosATL _u;
             private _dir = getDirVisual _u;
-            private _rad = _dir * pi / 180;
             private _grenade = _toThrow createVehicle [0,0,0];
-            _grenade setPosATL [(_pos select 0) + 3 * sin _rad, (_pos select 1) + 3 * cos _rad, (_pos select 2) + 1.5];
-            _grenade setVelocity [5 * sin _rad, 5 * cos _rad, 3]
+            _grenade setPosATL [(_pos select 0) + 3 * sin _dir, (_pos select 1) + 3 * cos _dir, (_pos select 2) + 1.5];
+            _grenade setVelocity [5 * sin _dir, 5 * cos _dir, 3]
         } else {
             systemChat format ["%1 has no smoke grenades", name _u]
         }
