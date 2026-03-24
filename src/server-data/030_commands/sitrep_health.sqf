@@ -18,7 +18,8 @@ zdoArmaVoice_fnc_commandSitrepHealth = {
                 if (_bleeding) then { _parts pushBack "bleeding" };
                 if (_pain > 0.3) then { _parts pushBack format ["in pain (%.0f%%)", _pain * 100] };
                 { _x params ["_bodyPart", "_classID", "_amount"];
-                  private _partName = ["head","body","left arm","right arm","left leg","right leg"] select _bodyPart;
+                  private _partNames = createHashMapFromArray [["Head","head"],["Body","body"],["LeftArm","left arm"],["RightArm","right arm"],["LeftLeg","left leg"],["RightLeg","right leg"]];
+                  private _partName = _partNames getOrDefault [_bodyPart, _bodyPart];
                   if (_amount > 0) then { _parts pushBack format ["%1 wound on %2", _amount, _partName] }
                 } forEach _wounds;
                 if (count _parts == 0) then { _report = _name + " is fine." } else { _report = _name + ": " + (_parts joinString ", ") + "." }

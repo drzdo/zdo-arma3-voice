@@ -7,9 +7,11 @@ zdoArmaVoice_fnc_commandDialog = {
     private _unitRole = if (!isNull _unit) then { typeOf _unit } else { "Infantry" };
     private _unitSide = if (!isNull _unit) then { str side _unit } else { "UNKNOWN" };
     private _pi = call zdoArmaVoice_fnc_coreGetPlayerInfo;
+    private _includeScreenshot = _args getOrDefault ["includeScreenshot", false];
     createHashMapFromArray [
         ["type", "dialog"],
         ["targetNetId", _target],
+        ["includeScreenshot", _includeScreenshot],
         ["systemInstructions", format [
             "You are %1 (%2), a military NPC in Arma 3 on side %3. The player commanding you is %4 %5. Respond naturally as this character would in a military setting. Keep responses concise (1-3 sentences). Use appropriate military terminology. Do not break character. Do not use quotation marks around your own speech. %6",
             _unitName, _unitRole, _unitSide, _pi select 1, _pi select 0, [_target] call zdoArmaVoice_fnc_coreUnitPersonality
@@ -18,6 +20,6 @@ zdoArmaVoice_fnc_commandDialog = {
     ]
 };
 ["dialog",
-"Talk to an NPC conversationally (ask questions, make remarks). ONLY for actual conversation, NOT for giving orders.",
-"{target: netId string of NPC to talk to, text: what the player said}",
+"Talk to an NPC conversationally (ask questions, make remarks). ONLY for actual conversation, NOT for giving orders. Set includeScreenshot=true when player asks NPC to look at something visual (map, screen, surroundings view).",
+"{target: netId string of NPC to talk to, text: what the player said, includeScreenshot?: boolean}",
 zdoArmaVoice_fnc_commandDialog] call zdoArmaVoice_fnc_coreRegisterCommand

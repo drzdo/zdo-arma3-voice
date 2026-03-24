@@ -23,10 +23,23 @@ public class GeminiLlmClient : ILlmClient
         var contents = new JsonArray();
         foreach (var m in messages)
         {
+            var parts = new JsonArray();
+            if (m.Image != null)
+            {
+                parts.Add(new JsonObject
+                {
+                    ["inline_data"] = new JsonObject
+                    {
+                        ["mime_type"] = m.Image.MediaType,
+                        ["data"] = m.Image.Base64Data
+                    }
+                });
+            }
+            parts.Add(new JsonObject { ["text"] = m.Content });
             contents.Add(new JsonObject
             {
                 ["role"] = m.Role == "assistant" ? "model" : "user",
-                ["parts"] = new JsonArray { new JsonObject { ["text"] = m.Content } }
+                ["parts"] = parts
             });
         }
 

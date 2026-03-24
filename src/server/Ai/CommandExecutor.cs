@@ -9,13 +9,15 @@ public class CommandExecutor
 {
     private readonly RpcClient _rpc;
     private readonly DialogManager? _dialogManager;
+    private readonly IScreenCapture? _screenCapture;
     private readonly float _ackChance;
     private readonly Random _rng = new();
 
-    public CommandExecutor(RpcClient rpc, DialogManager? dialogManager, float ackChance = 0f)
+    public CommandExecutor(RpcClient rpc, DialogManager? dialogManager, float ackChance = 0f, IScreenCapture? screenCapture = null)
     {
         _rpc = rpc;
         _dialogManager = dialogManager;
+        _screenCapture = screenCapture;
         _ackChance = Math.Clamp(ackChance, 0f, 1f);
     }
 
@@ -45,7 +47,7 @@ public class CommandExecutor
 
                 Log.Info("SQF", $"coreCallCommand -> {resultStr[..Math.Min(200, resultStr.Length)]} ({sw.ElapsedMilliseconds}ms)");
 
-                var cmdRetry = HandleCommandResult(cmd.Command, resultStr, isRadio);
+                var cmdRetry = await HandleCommandResultAsync(cmd.Command, resultStr, isRadio);
                 if (cmdRetry != null)
                 {
                     retryContext ??= new();
@@ -62,7 +64,7 @@ public class CommandExecutor
         return retryContext;
     }
 
-    private Dictionary<string, bool>? HandleCommandResult(string commandId, string resultStr, bool isRadio)
+    private async Task<Dictionary<string, bool>?> HandleCommandResultAsync(string commandId, string resultStr, bool isRadio)
     {
         if (string.IsNullOrEmpty(resultStr) || resultStr == "null" || resultStr == "nil")
             return null;
@@ -95,11 +97,19 @@ public class CommandExecutor
                 var targetNetId = root.TryGetProperty("targetNetId", out var tn) ? tn.GetString() ?? "" : "";
                 var systemInstructions = root.TryGetProperty("systemInstructions", out var si) ? si.GetString() ?? "" : "";
                 var message = root.TryGetProperty("message", out var msg) ? msg.GetString() ?? "" : "";
+                var wantsScreenshot = root.TryGetProperty("includeScreenshot", out var ss) && ss.GetBoolean();
+
+                LlmImage? image = null;
+                if (wantsScreenshot && _screenCapture != null)
+                {
+                    image = await _screenCapture.CaptureAsync();
+                    if (image == null) Log.Warn("Cmd", $"{commandId}: screenshot capture failed");
+                }
 
                 if (!string.IsNullOrEmpty(systemInstructions))
                 {
-                    _dialogManager.Enqueue(targetNetId, systemInstructions, message, isRadio);
-                    Log.Info("Cmd", $"{commandId}: dialog queued -> {targetNetId}");
+                    _dialogManager.Enqueue(targetNetId, systemInstructions, message, isRadio, image);
+                    Log.Info("Cmd", $"{commandId}: dialog queued -> {targetNetId}{(image != null ? " +screenshot" : "")}");
                 }
                 return null;
             }

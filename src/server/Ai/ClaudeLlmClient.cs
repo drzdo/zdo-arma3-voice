@@ -21,7 +21,31 @@ public class ClaudeLlmClient : ILlmClient
         var msgsArray = new JsonArray();
         foreach (var m in messages)
         {
-            msgsArray.Add(new JsonObject { ["role"] = m.Role, ["content"] = m.Content });
+            if (m.Image != null)
+            {
+                msgsArray.Add(new JsonObject
+                {
+                    ["role"] = m.Role,
+                    ["content"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["type"] = "image",
+                            ["source"] = new JsonObject
+                            {
+                                ["type"] = "base64",
+                                ["media_type"] = m.Image.MediaType,
+                                ["data"] = m.Image.Base64Data
+                            }
+                        },
+                        new JsonObject { ["type"] = "text", ["text"] = m.Content }
+                    }
+                });
+            }
+            else
+            {
+                msgsArray.Add(new JsonObject { ["role"] = m.Role, ["content"] = m.Content });
+            }
         }
 
         var requestBody = new JsonObject

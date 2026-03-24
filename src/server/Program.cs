@@ -130,7 +130,8 @@ public class Program
         }
 
         // Command executor
-        var commandExecutor = new CommandExecutor(rpcClient, dialogManager, config.Audio.AckChance);
+        var screenCapture = new ScreenCapture();
+        var commandExecutor = new CommandExecutor(rpcClient, dialogManager, config.Audio.AckChance, screenCapture);
 
         // Wire up TcpBridge events
         bridge.OnHeadReceived = headJson =>

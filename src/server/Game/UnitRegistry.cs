@@ -138,7 +138,7 @@ public class UnitRegistry
     {
         try
         {
-            var result = await _rpc.CallAsync("call zdoArmaVoice_fnc_getSquad");
+            var result = await _rpc.CallAsync("call zdoArmaVoice_fnc_coreGetSquad");
 
             if (string.IsNullOrEmpty(result) || result == "null")
             {

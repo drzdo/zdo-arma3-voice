@@ -6,7 +6,7 @@ using ZdoArmaVoice.Server.Speech;
 
 namespace ZdoArmaVoice.Server.Ai;
 
-public record DialogRequest(string TargetNetId, string SystemInstructions, string Message, bool IsRadio);
+public record DialogRequest(string TargetNetId, string SystemInstructions, string Message, bool IsRadio, LlmImage? Image = null);
 
 /// <summary>
 /// Manages the full NPC dialog lifecycle. One at a time, queued.
@@ -48,10 +48,10 @@ public class DialogManager
         });
     }
 
-    public void Enqueue(string targetNetId, string systemInstructions, string message, bool isRadio = true)
+    public void Enqueue(string targetNetId, string systemInstructions, string message, bool isRadio = true, LlmImage? image = null)
     {
-        _queue.Writer.TryWrite(new DialogRequest(targetNetId, systemInstructions, message, isRadio));
-        Log.Info("DialogManager", $"Enqueued dialog with {targetNetId} ({(isRadio ? "radio" : "direct")})");
+        _queue.Writer.TryWrite(new DialogRequest(targetNetId, systemInstructions, message, isRadio, image));
+        Log.Info("DialogManager", $"Enqueued dialog with {targetNetId} ({(isRadio ? "radio" : "direct")}){(image != null ? " +image" : "")}");
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -75,7 +75,8 @@ public class DialogManager
 
         // 1. LLM response
         var responseText = await _npcDialog.GenerateResponseAsync(
-            request.SystemInstructions, request.Message, request.TargetNetId);
+            request.SystemInstructions, request.Message, request.TargetNetId,
+            image: request.Image, npcName: npcName);
         ct.ThrowIfCancellationRequested();
 
         // 2. TTS
