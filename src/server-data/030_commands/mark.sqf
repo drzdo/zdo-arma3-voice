@@ -15,6 +15,6 @@ zdoArmaVoice_fnc_commandMark = {
     systemChat format ["Marker: %1", _label]
 };
 ["mark",
-"Create a map marker. Triggers: mark this position, mark as Bravo, mark your location as Alpha. Use position ""self"" if the player asks a unit to mark their own location.",
+"Create a map marker. Triggers: mark this position, mark as Bravo, mark your location as Alpha, отметь позицию, поставь маркер. Use position ""self"" if the player asks a unit to mark their own location.",
 "{position?: Position or ""self"", label?: string}",
 zdoArmaVoice_fnc_commandMark] call zdoArmaVoice_fnc_coreRegisterCommand

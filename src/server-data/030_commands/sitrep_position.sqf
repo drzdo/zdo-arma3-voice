@@ -23,6 +23,6 @@ zdoArmaVoice_fnc_commandSitrepPosition = {
     ]
 };
 ["sitrep_position",
-"Report unit position relative to the player via voice. Triggers: where are you, report position, what is your azimuth.",
+"Report unit position relative to the player via voice. Triggers: where are you, report position, what is your azimuth, где ты, доложи позицию, какой азимут.",
 "{text?: what the player asked}",
 zdoArmaVoice_fnc_commandSitrepPosition] call zdoArmaVoice_fnc_coreRegisterCommand

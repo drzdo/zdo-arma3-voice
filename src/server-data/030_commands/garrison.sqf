@@ -12,6 +12,6 @@ zdoArmaVoice_fnc_commandGarrison = {
     [_units, "garrison"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["garrison",
-"Order units to enter the building at crosshair. Triggers: garrison, enter the building.",
+"Order units to enter the building at crosshair. Triggers: garrison, enter the building, занять здание, в здание, зайди в дом.",
 "{}",
 zdoArmaVoice_fnc_commandGarrison] call zdoArmaVoice_fnc_coreRegisterCommand

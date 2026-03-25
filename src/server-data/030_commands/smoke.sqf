@@ -34,6 +34,6 @@ zdoArmaVoice_fnc_commandSmoke = {
     [_units, "smoke"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["smoke",
-"Pop smoke grenade near units. Triggers: smoke, pop smoke, throw smoke, cover with smoke.",
+"Pop smoke grenade near units. Triggers: smoke, pop smoke, throw smoke, cover with smoke, дым, дымовую, кинь дымовую.",
 "{color?: white/red/green/blue/orange/purple/yellow}",
 zdoArmaVoice_fnc_commandSmoke] call zdoArmaVoice_fnc_coreRegisterCommand

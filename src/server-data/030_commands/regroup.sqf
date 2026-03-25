@@ -8,6 +8,6 @@ zdoArmaVoice_fnc_commandRegroup = {
     [_units, "regroup"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["regroup",
-"Regroup on the player, come back. Triggers: regroup, come to me, fall back.",
+"Regroup on the player, come back. Triggers: regroup, come to me, fall back, ко мне, сюда, назад.",
 "{}",
 zdoArmaVoice_fnc_commandRegroup] call zdoArmaVoice_fnc_coreRegisterCommand

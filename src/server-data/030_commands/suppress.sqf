@@ -5,6 +5,6 @@ zdoArmaVoice_fnc_commandSuppress = {
     [_units, "suppress"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["suppress",
-"Suppressive fire at a position or direction. Triggers: suppress that position, suppressive fire.",
+"Suppressive fire at a position or direction. Triggers: suppress that position, suppressive fire, подави, огонь на подавление.",
 "{position?: Position}",
 zdoArmaVoice_fnc_commandSuppress] call zdoArmaVoice_fnc_coreRegisterCommand

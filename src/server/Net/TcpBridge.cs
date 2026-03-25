@@ -34,6 +34,9 @@ public sealed class TcpBridge : IDisposable
     /// <summary>Fired when a PTT event arrives ("down"/"up", [x,y,z] position).</summary>
     public Action<string>? OnPttEvent { get; set; }
 
+    /// <summary>Fired when SQF requests command execution (exec message).</summary>
+    public Action<JsonElement>? OnExecReceived { get; set; }
+
     /// <summary>Fired when a client connects.</summary>
     public Action? OnClientConnected { get; set; }
 
@@ -154,6 +157,10 @@ public sealed class TcpBridge : IDisposable
                         case "ptt":
                             var dir = root.GetProperty("dir").GetString() ?? "";
                             OnPttEvent?.Invoke(dir);
+                            break;
+
+                        case "exec":
+                            OnExecReceived?.Invoke(root.Clone());
                             break;
 
                         default:

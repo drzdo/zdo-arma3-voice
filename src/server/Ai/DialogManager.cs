@@ -94,10 +94,11 @@ public class DialogManager
         if (samples.Length == 0) { Log.Warn("DialogManager", "PCM extraction failed."); return; }
 
         // 4. Apply radio effect if radio mode
+        float[]? radioSamples = null;
         if (request.IsRadio)
         {
             Log.Info("DialogManager", "Radio effect");
-            samples = _radioEffect.ApplyRadioEffect(samples, sampleRate);
+            radioSamples = _radioEffect.ApplyRadioEffect(samples, sampleRate);
         }
         else
         {
@@ -106,7 +107,7 @@ public class DialogManager
 
         // 5. Play through spatial provider
         var spatialProvider = new SpatialSampleProvider(
-            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, request.IsRadio, _radioPan, _radioVolume);
+            samples, radioSamples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, request.IsRadio, _radioPan, _radioVolume);
 
         _audioPlayer.Play(spatialProvider);
 

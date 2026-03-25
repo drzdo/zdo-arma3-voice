@@ -38,6 +38,6 @@ zdoArmaVoice_fnc_commandCircle = {
     [_units, "circle"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["circle",
-"Form a perimeter circle at a position. Units move to evenly spaced points on the circle and face outward. Triggers: form perimeter, circle up, set up perimeter, surround this position.",
+"Form a perimeter circle at a position. Units move to evenly spaced points on the circle and face outward. Triggers: form perimeter, circle up, set up perimeter, surround this position, встаньте в круг, периметр, оцепление.",
 "{position?: Position, radius?: number (default 10)}",
 zdoArmaVoice_fnc_commandCircle] call zdoArmaVoice_fnc_coreRegisterCommand

@@ -41,6 +41,7 @@ There may be bugs. Report them in `Issues`.
 | "Get inside" / "В здание"               | Each unit enters the nearest building to them                 |
 | "Drive there" / "Езжай туда"            | Works for vehicles too — driver moves to crosshair            |
 | "Form perimeter" / "Set up perimeter"  | Units form a circle at crosshair, facing outward (default 10m radius) |
+| "Recon 500m forward" / "Scout ahead"  | Units advance in 30m bounds, scanning forward/left/right. Go prone and report if hostiles spotted |
 
 ### Combat
 

@@ -41,6 +41,6 @@ zdoArmaVoice_fnc_commandSitrepHealth = {
     ]
 };
 ["sitrep_health",
-"Report health status via voice. Triggers: status report, how are you, report health.",
+"Report health status via voice. Triggers: status report, how are you, report health, как здоровье, доложи состояние, как ты.",
 "{}",
 zdoArmaVoice_fnc_commandSitrepHealth] call zdoArmaVoice_fnc_coreRegisterCommand

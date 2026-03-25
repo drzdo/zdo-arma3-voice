@@ -8,6 +8,6 @@ zdoArmaVoice_fnc_commandStop = {
     [_units, "stop"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["stop",
-"Cancel current action, stay put but remain responsive to new orders. Triggers: stop, freeze, halt, hold position.",
+"Cancel current action, stay put but remain responsive to new orders. Triggers: stop, freeze, halt, hold position, стоп, стой, замри, отставить.",
 "{}",
 zdoArmaVoice_fnc_commandStop] call zdoArmaVoice_fnc_coreRegisterCommand

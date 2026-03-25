@@ -8,7 +8,7 @@ zdoArmaVoice_fnc_commandMedic = {
 };
 if (isClass (configFile >> "CfgPatches" >> "ace_medical_ai")) then {
 ["medic",
-"Request a medic for the wounded. Units = who needs healing: if PLAYER is hurt (""I need a medic"", ""medic!"") set units to empty []. If SOMEONE ELSE is hurt (""heal Miller"", ""Miller needs a medic"") set units to that person. Triggers: medic!, need a medic, heal him.",
+"Request a medic for the wounded. Units = who needs healing: if PLAYER is hurt (""I need a medic"", ""medic!"") set units to empty []. If SOMEONE ELSE is hurt (""heal Miller"", ""Miller needs a medic"") set units to that person. Triggers: medic!, need a medic, heal him, медик, нужен врач, санитар.",
 "{}",
 zdoArmaVoice_fnc_commandMedic] call zdoArmaVoice_fnc_coreRegisterCommand
 }

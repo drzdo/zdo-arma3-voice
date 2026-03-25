@@ -59,6 +59,6 @@ zdoArmaVoice_fnc_commandSitrepHostiles = {
     ]
 };
 ["sitrep_hostiles",
-"Report known hostile contacts via voice. Triggers: report contacts, any hostiles, what do you see.",
+"Report known hostile contacts via voice. Triggers: report contacts, any hostiles, what do you see, доложи обстановку, есть враги, что видишь.",
 "{}",
 zdoArmaVoice_fnc_commandSitrepHostiles] call zdoArmaVoice_fnc_coreRegisterCommand

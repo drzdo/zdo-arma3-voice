@@ -46,6 +46,6 @@ zdoArmaVoice_fnc_commandGetin = {
     [_units, "getin"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["getin",
-"Get in a vehicle at crosshair. Optionally specify role. Triggers: get in, mount up, get in as driver.",
+"Get in a vehicle at crosshair. Optionally specify role. Triggers: get in, mount up, get in as driver, садись, залезай, в машину.",
 "{role?: driver/gunner/commander/cargo}",
 zdoArmaVoice_fnc_commandGetin] call zdoArmaVoice_fnc_coreRegisterCommand

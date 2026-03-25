@@ -15,6 +15,6 @@ zdoArmaVoice_fnc_commandAttack = {
     [_units, "attack"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["attack",
-"Engage/fire at a target. Triggers: attack, fire at, engage.",
+"Engage/fire at a target. Triggers: attack, fire at, engage, атакуй, огонь по цели, уничтожь.",
 "{target?: netId string}",
 zdoArmaVoice_fnc_commandAttack] call zdoArmaVoice_fnc_coreRegisterCommand

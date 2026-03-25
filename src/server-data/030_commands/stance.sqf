@@ -9,6 +9,6 @@ zdoArmaVoice_fnc_commandStance = {
     [_units, "stance"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["stance",
-"Change unit stance/posture. Triggers: stand up (UP), crouch (MIDDLE), prone (DOWN), auto (AUTO).",
+"Change unit stance/posture. Triggers: stand up (UP), crouch (MIDDLE), prone (DOWN), auto (AUTO), встань, присядь, ляг, в полный рост.",
 "{stance: DOWN/MIDDLE/UP/AUTO}",
 zdoArmaVoice_fnc_commandStance] call zdoArmaVoice_fnc_coreRegisterCommand

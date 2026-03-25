@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ZdoArmaVoice.Server.Ai;
 using ZdoArmaVoice.Server.Audio;
 using ZdoArmaVoice.Server.Game;
@@ -226,6 +227,55 @@ public class Program
                     }
                 });
             }
+        };
+
+        bridge.OnExecReceived = (execJson) =>
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var command = execJson.GetProperty("command").GetString() ?? "";
+                    var unitsArr = execJson.GetProperty("units");
+                    var units = new List<string>();
+                    foreach (var u in unitsArr.EnumerateArray())
+                    {
+                        if (u.ValueKind == JsonValueKind.String) units.Add(u.GetString() ?? "");
+                        else if (u.ValueKind == JsonValueKind.Number) units.Add(u.GetInt32().ToString());
+                    }
+
+                    var lookAt = new float[] { 0, 0, 0 };
+                    if (execJson.TryGetProperty("lookAtPosition", out var posEl) && posEl.ValueKind == JsonValueKind.Array)
+                    {
+                        var arr = posEl.EnumerateArray().ToArray();
+                        if (arr.Length >= 2)
+                        {
+                            lookAt[0] = arr[0].GetSingle();
+                            lookAt[1] = arr[1].GetSingle();
+                            if (arr.Length >= 3) lookAt[2] = arr[2].GetSingle();
+                        }
+                    }
+
+                    var isRadio = !execJson.TryGetProperty("isRadio", out var radioProp) || radioProp.GetBoolean();
+
+                    var argsJson = execJson.TryGetProperty("args", out var argsProp)
+                        ? argsProp.Clone()
+                        : JsonDocument.Parse("{}").RootElement;
+
+                    var intent = new ParsedIntent
+                    {
+                        Units = units,
+                        Commands = [new ParsedCommand { Command = command, Args = argsJson }]
+                    };
+
+                    Log.Info("Exec", $"SQF exec: {command} units=[{string.Join(",", units)}] isRadio={isRadio}");
+                    await commandExecutor.ExecuteAsync(intent, lookAt, isRadio);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Exec", $"Error: {ex.Message}");
+                }
+            });
         };
 
         bridge.OnClientConnected = () =>

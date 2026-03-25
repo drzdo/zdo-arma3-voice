@@ -13,6 +13,6 @@ zdoArmaVoice_fnc_commandEnterNearestBuilding = {
     [_units, "enter_nearest_building"] call zdoArmaVoice_fnc_buildAckInstruction
 };
 ["enter_nearest_building",
-"Enter the nearest building to each unit. Triggers: get inside, hide in building, take cover inside.",
+"Enter the nearest building to each unit. Triggers: get inside, hide in building, take cover inside, заходи в здание, спрячься в доме, внутрь.",
 "{}",
 zdoArmaVoice_fnc_commandEnterNearestBuilding] call zdoArmaVoice_fnc_coreRegisterCommand

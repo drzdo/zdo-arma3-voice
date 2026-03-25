@@ -28,6 +28,6 @@ zdoArmaVoice_fnc_commandMirrorstance = {
     } forEach _units
 };
 ["mirrorstance",
-"Copy player's stance continuously. Unit mirrors player's posture until given a new stance or stop command. Triggers: copy my stance, mirror me, do as I do.",
+"Copy player's stance continuously. Unit mirrors player's posture until given a new stance or stop command. Triggers: copy my stance, mirror me, do as I do, повторяй за мной, копируй стойку.",
 "{}",
 zdoArmaVoice_fnc_commandMirrorstance] call zdoArmaVoice_fnc_coreRegisterCommand

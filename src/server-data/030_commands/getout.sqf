@@ -6,6 +6,6 @@ zdoArmaVoice_fnc_commandGetout = {
     } forEach _units
 };
 ["getout",
-"Get out of current vehicle. Triggers: get out, dismount.",
+"Get out of current vehicle. Triggers: get out, dismount, вылезай, из машины, выходи.",
 "{}",
 zdoArmaVoice_fnc_commandGetout] call zdoArmaVoice_fnc_coreRegisterCommand

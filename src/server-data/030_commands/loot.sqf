@@ -112,6 +112,6 @@ zdoArmaVoice_fnc_commandLoot = {
     } forEach _units
 };
 ["loot",
-"Loot an area — collect weapons, gear and items from weapon piles and dead bodies. If unit is in a vehicle or vehicle is nearby, items go into the vehicle. Triggers: loot this area, go loot, collect gear.",
+"Loot an area — collect weapons, gear and items from weapon piles and dead bodies. If unit is in a vehicle or vehicle is nearby, items go into the vehicle. Triggers: loot this area, go loot, collect gear, собери лут, собери оружие, подбери всё.",
 "{radius?: number (default 100)}",
 zdoArmaVoice_fnc_commandLoot] call zdoArmaVoice_fnc_coreRegisterCommand

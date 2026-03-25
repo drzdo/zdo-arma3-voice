@@ -7,6 +7,6 @@ zdoArmaVoice_fnc_commandDrop = {
     } forEach _units
 };
 ["drop",
-"Go prone immediately. Triggers: hit the dirt, get down.",
+"Go prone immediately. Triggers: hit the dirt, get down, ложись, на землю, вниз.",
 "{}",
 zdoArmaVoice_fnc_commandDrop] call zdoArmaVoice_fnc_coreRegisterCommand

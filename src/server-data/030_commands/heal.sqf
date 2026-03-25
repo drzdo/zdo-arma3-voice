@@ -4,7 +4,7 @@ zdoArmaVoice_fnc_commandHeal = {
 };
 if (isClass (configFile >> "CfgPatches" >> "ace_medical_ai")) then {
 ["heal",
-"Order units to heal themselves using ACE3 medical AI. Triggers: heal yourself, patch up.",
+"Order units to heal themselves using ACE3 medical AI. Triggers: heal yourself, patch up, лечись, подлечись, перевяжись.",
 "{}",
 zdoArmaVoice_fnc_commandHeal] call zdoArmaVoice_fnc_coreRegisterCommand
 }

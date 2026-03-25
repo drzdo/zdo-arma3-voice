@@ -8,6 +8,6 @@ zdoArmaVoice_fnc_commandName = {
     systemChat format ["Named: %1 = %2", _label, _netId]
 };
 ["name",
-"Assign a custom name/label to the object at crosshair. Triggers: this is Alpha, name this vehicle Bravo.",
+"Assign a custom name/label to the object at crosshair. Triggers: this is Alpha, name this vehicle Bravo, это Альфа, назови это Браво.",
 "{label: string}",
 zdoArmaVoice_fnc_commandName] call zdoArmaVoice_fnc_coreRegisterCommand

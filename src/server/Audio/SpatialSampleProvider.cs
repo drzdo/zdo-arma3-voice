@@ -10,7 +10,8 @@ namespace ZdoArmaVoice.Server.Audio;
 /// </summary>
 public class SpatialSampleProvider : ISampleProvider
 {
-    private readonly float[] _monoSamples;
+    private readonly float[] _cleanSamples;
+    private readonly float[]? _radioSamples;
     private readonly GameState _gameState;
     private readonly string _npcNetId;
     private readonly UnitRegistry _unitRegistry;
@@ -23,11 +24,14 @@ public class SpatialSampleProvider : ISampleProvider
 
     public WaveFormat WaveFormat { get; }
 
-    /// <param name="isRadio">If true, skip distance attenuation and muffling.</param>
+    /// <param name="cleanSamples">Clean (non-effected) mono samples for spatial audio.</param>
+    /// <param name="radioSamples">Radio-effected mono samples (null if not radio mode).</param>
+    /// <param name="isRadio">If true, play both radio and spatial signals.</param>
     /// <param name="radioPan">Radio pan: -1=left, 0=center, 1=right.</param>
     /// <param name="radioVolume">Radio volume: 0=silent, 1=full.</param>
     public SpatialSampleProvider(
-        float[] monoSamples,
+        float[] cleanSamples,
+        float[]? radioSamples,
         int sampleRate,
         GameState gameState,
         string npcNetId,
@@ -36,7 +40,8 @@ public class SpatialSampleProvider : ISampleProvider
         float radioPan = 0f,
         float radioVolume = 1f)
     {
-        _monoSamples = monoSamples;
+        _cleanSamples = cleanSamples;
+        _radioSamples = radioSamples;
         _gameState = gameState;
         _npcNetId = npcNetId;
         _unitRegistry = unitRegistry;
@@ -52,7 +57,7 @@ public class SpatialSampleProvider : ISampleProvider
     {
         // count is in stereo samples (L,R pairs), so count/2 mono samples needed
         int stereoFrames = count / 2;
-        int monoAvailable = _monoSamples.Length - _position;
+        int monoAvailable = _cleanSamples.Length - _position;
         int framesToProcess = Math.Min(stereoFrames, monoAvailable);
 
         if (framesToProcess <= 0)
@@ -86,30 +91,35 @@ public class SpatialSampleProvider : ISampleProvider
         float leftGain = MathF.Cos(panAngle);
         float rightGain = MathF.Sin(panAngle);
 
+        // Spatial params (shared)
+        float attenuation = 1f / MathF.Max(1f, distance / 5f);
+        float alpha = Math.Clamp(1f - distance / 50f, 0.1f, 1f);
+
         for (int i = 0; i < framesToProcess; i++)
         {
-            float mono = _monoSamples[_position + i];
+            float clean = _cleanSamples[_position + i];
 
-            if (_isRadio)
+            // Spatial component (always computed from clean audio)
+            float spatialMono = clean * attenuation;
+            float filteredL = alpha * (spatialMono * leftGain) + (1f - alpha) * _prevFilteredL;
+            float filteredR = alpha * (spatialMono * rightGain) + (1f - alpha) * _prevFilteredR;
+            _prevFilteredL = filteredL;
+            _prevFilteredR = filteredR;
+
+            if (_isRadio && _radioSamples != null)
             {
-                // Radio: configurable pan + volume
-                // pan -1=left, 0=center, 1=right (equal-power)
+                // Radio + spatial: radio-effected signal with radio pan, plus spatial
+                float radio = _radioSamples[_position + i];
                 float panAngleR = (_radioPan + 1f) * MathF.PI / 4f;
-                buffer[offset + i * 2] = mono * _radioVolume * MathF.Cos(panAngleR);
-                buffer[offset + i * 2 + 1] = mono * _radioVolume * MathF.Sin(panAngleR);
+                float radioL = radio * _radioVolume * MathF.Cos(panAngleR);
+                float radioR = radio * _radioVolume * MathF.Sin(panAngleR);
+
+                buffer[offset + i * 2] = radioL + filteredL;
+                buffer[offset + i * 2 + 1] = radioR + filteredR;
             }
             else
             {
-                // Spatial: distance attenuation + pan + low-pass
-                float attenuation = 1f / MathF.Max(1f, distance / 5f);
-                float alpha = Math.Clamp(1f - distance / 50f, 0.1f, 1f);
-
-                mono *= attenuation;
-                float filteredL = alpha * (mono * leftGain) + (1f - alpha) * _prevFilteredL;
-                float filteredR = alpha * (mono * rightGain) + (1f - alpha) * _prevFilteredR;
-                _prevFilteredL = filteredL;
-                _prevFilteredR = filteredR;
-
+                // Direct: spatial only
                 buffer[offset + i * 2] = filteredL;
                 buffer[offset + i * 2 + 1] = filteredR;
             }
