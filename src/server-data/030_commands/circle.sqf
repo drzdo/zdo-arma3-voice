@@ -22,10 +22,10 @@ zdoArmaVoice_fnc_commandCircle = {
             waitUntil {
                 sleep 1;
                 ([_u, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand)
-                || { _u distance2D _targetPos < 3 }
+                || { (_u distance2D _targetPos) < 3 }
                 || { time > _timeout }
             };
-            if (!([_u, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) && { _u distance2D _targetPos < 3 }) then {
+            if (!([_u, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) && { (_u distance2D _targetPos) < 3 }) then {
                 private _watchPos = [
                     (getPosATL _u select 0) + 100 * sin _outwardAngle,
                     (getPosATL _u select 1) + 100 * cos _outwardAngle,

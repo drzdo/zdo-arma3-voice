@@ -15,14 +15,14 @@ zdoArmaVoice_fnc_commandGetin = {
 
             if (call _fnShouldStop) exitWith {};
 
-            if (_unit distance _veh >= 7) then {
+            if ((_unit distance _veh) >= 7) then {
                 _unit doMove (getPosATL _veh);
                 systemChat format ["%1 moving to vehicle", name _unit];
                 private _timeout = time + 60;
                 waitUntil {
                     sleep 1;
                     (call _fnShouldStop)
-                    || { _unit distance _veh < 7 }
+                    || { (_unit distance _veh) < 7 }
                     || { time > _timeout }
                 };
             };
@@ -30,7 +30,7 @@ zdoArmaVoice_fnc_commandGetin = {
             if (call _fnShouldStop) exitWith {
                 systemChat format ["%1 getting in was cancelled", name _unit]
             };
-            if (_unit distance _veh >= 7) exitWith {
+            if ((_unit distance _veh) >= 7) exitWith {
                 systemChat format ["%1 couldn't reach vehicle", name _unit]
             };
 

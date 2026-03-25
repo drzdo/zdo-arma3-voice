@@ -26,7 +26,7 @@ zdoArmaVoice_fnc_commandLoot = {
                 private _weaponPiles = _center nearObjects ["WeaponHolderSimulated", _radius];
                 _weaponPiles append (_center nearObjects ["WeaponHolder", _radius]);
                 _weaponPiles append (_center nearObjects ["GroundWeaponHolder", _radius]);
-                private _bodies = entities "Man" select { !alive _x && _x distance _center < _radius };
+                private _bodies = entities "Man" select { !alive _x && (_x distance _center) < _radius };
                 private _targets = _weaponPiles + _bodies;
 
                 if (count _targets == 0) exitWith {
@@ -45,12 +45,12 @@ zdoArmaVoice_fnc_commandLoot = {
                     waitUntil {
                         sleep 1;
                         ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand)
-                        || { _unit distance _tgt < 4 }
+                        || { (_unit distance _tgt) < 4 }
                         || { time > _timeout }
                     };
 
                     if ([_unit, _startTime] call zdoArmaVoice_fnc_shouldStopCurrentCommand) exitWith {};
-                    if (_unit distance _tgt >= 4) then { continue };
+                    if ((_unit distance _tgt) >= 4) then { continue };
 
                     if (_tgt isKindOf "Man") then {
                         {

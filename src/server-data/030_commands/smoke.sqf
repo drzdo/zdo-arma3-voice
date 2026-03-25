@@ -22,9 +22,10 @@ zdoArmaVoice_fnc_commandSmoke = {
         };
         if (_toThrow != "") then {
             _u removeMagazine _toThrow;
+            private _ammo = getText (configFile >> "CfgMagazines" >> _toThrow >> "ammo");
             private _pos = getPosATL _u;
             private _dir = getDirVisual _u;
-            private _grenade = _toThrow createVehicle [0,0,0];
+            private _grenade = _ammo createVehicle [0,0,0];
             _grenade setPosATL [(_pos select 0) + 3 * sin _dir, (_pos select 1) + 3 * cos _dir, (_pos select 2) + 1.5];
             _grenade setVelocity [5 * sin _dir, 5 * cos _dir, 3]
         } else {

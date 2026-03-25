@@ -57,7 +57,8 @@ C# calls this, sends the result to the LLM, and parses the response. Mission con
 
 ### SQF gotchas
 
-- **Operator precedence**: All SQF binary operators evaluate **right-to-left**. Always parenthesize `callExtension` before comparing: `("ext" callExtension "cmd") == "value"`.
+- **Operator precedence**: All SQF binary operators evaluate **right-to-left** with equal precedence. This means `a distance b < 10` evaluates as `a distance (b < 10)` which is WRONG. Always parenthesize binary operator results before comparisons: `(a distance b) < 10`, `(a distance2D b) >= 5`, `("ext" callExtension "cmd") == "value"`. Rule of thumb: if a binary command's result is compared, wrap it in parens.
+- **`sin`/`cos` take degrees**: SQF `sin` and `cos` take degrees, NOT radians. Do NOT convert with `* pi / 180`.
 - **`callExtension` forms**:
   - Simple: `ext callExtension "fn"` → returns String.
   - Array: `ext callExtension ["fn", [arg1, arg2, ...]]` → returns `[result, returnCode, errorCode]`.

@@ -87,8 +87,8 @@ zdoArmaVoice_fnc_commandRecon = {
 
             // Check if destination reached (any active unit close enough)
             private _closest = _active select 0;
-            { if (_x distance2D _destination < _closest distance2D _destination) then { _closest = _x } } forEach _active;
-            if (_closest distance2D _destination < 10) exitWith {};
+            { if ((_x distance2D _destination) < (_closest distance2D _destination)) then { _closest = _x } } forEach _active;
+            if ((_closest distance2D _destination) < 10) exitWith {};
 
             // Calculate next waypoint along bearing
             private _leaderPos = getPosATL _closest;
@@ -123,7 +123,7 @@ zdoArmaVoice_fnc_commandRecon = {
                 if (!isNull (call _fnAnyHostiles)) exitWith { true };
 
                 private _nowActive = call _fnActiveUnits;
-                _arrived = _nowActive select { _x distance2D _nextCenter < 8 };
+                _arrived = _nowActive select { (_x distance2D _nextCenter) < 8 };
                 // All active arrived, or timeout
                 (count _arrived >= count _nowActive) || { time > _deadline }
             };
