@@ -16,6 +16,7 @@ public class SpatialSampleProvider : ISampleProvider
     private readonly UnitRegistry _unitRegistry;
     private readonly bool _isRadio;
     private readonly float _radioPan;
+    private readonly float _radioVolume;
     private int _position;
     private float _prevFilteredL;
     private float _prevFilteredR;
@@ -24,6 +25,7 @@ public class SpatialSampleProvider : ISampleProvider
 
     /// <param name="isRadio">If true, skip distance attenuation and muffling.</param>
     /// <param name="radioPan">Radio pan: -1=left, 0=center, 1=right.</param>
+    /// <param name="radioVolume">Radio volume: 0=silent, 1=full.</param>
     public SpatialSampleProvider(
         float[] monoSamples,
         int sampleRate,
@@ -31,7 +33,8 @@ public class SpatialSampleProvider : ISampleProvider
         string npcNetId,
         UnitRegistry unitRegistry,
         bool isRadio = false,
-        float radioPan = 0f)
+        float radioPan = 0f,
+        float radioVolume = 1f)
     {
         _monoSamples = monoSamples;
         _gameState = gameState;
@@ -39,6 +42,7 @@ public class SpatialSampleProvider : ISampleProvider
         _unitRegistry = unitRegistry;
         _isRadio = isRadio;
         _radioPan = Math.Clamp(radioPan, -1f, 1f);
+        _radioVolume = Math.Clamp(radioVolume, 0f, 1f);
         _position = 0;
 
         WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
@@ -88,11 +92,11 @@ public class SpatialSampleProvider : ISampleProvider
 
             if (_isRadio)
             {
-                // Radio: configurable pan, full volume
+                // Radio: configurable pan + volume
                 // pan -1=left, 0=center, 1=right (equal-power)
                 float panAngleR = (_radioPan + 1f) * MathF.PI / 4f;
-                buffer[offset + i * 2] = mono * MathF.Cos(panAngleR);
-                buffer[offset + i * 2 + 1] = mono * MathF.Sin(panAngleR);
+                buffer[offset + i * 2] = mono * _radioVolume * MathF.Cos(panAngleR);
+                buffer[offset + i * 2 + 1] = mono * _radioVolume * MathF.Sin(panAngleR);
             }
             else
             {

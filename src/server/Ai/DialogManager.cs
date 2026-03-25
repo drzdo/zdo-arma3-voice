@@ -23,6 +23,7 @@ public class DialogManager
     private readonly GameState _gameState;
     private readonly UnitRegistry _unitRegistry;
     private readonly float _radioPan;
+    private readonly float _radioVolume;
     private readonly Channel<DialogRequest> _queue;
 
     public DialogManager(
@@ -32,7 +33,8 @@ public class DialogManager
         RadioEffect radioEffect,
         GameState gameState,
         UnitRegistry unitRegistry,
-        float radioPan = 0f)
+        float radioPan = 0f,
+        float radioVolume = 1f)
     {
         _npcDialog = npcDialog;
         _tts = tts;
@@ -40,6 +42,7 @@ public class DialogManager
         _radioEffect = radioEffect;
         _gameState = gameState;
         _radioPan = radioPan;
+        _radioVolume = radioVolume;
         _unitRegistry = unitRegistry;
 
         _queue = Channel.CreateUnbounded<DialogRequest>(new UnboundedChannelOptions
@@ -103,7 +106,7 @@ public class DialogManager
 
         // 5. Play through spatial provider
         var spatialProvider = new SpatialSampleProvider(
-            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, request.IsRadio, _radioPan);
+            samples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, request.IsRadio, _radioPan, _radioVolume);
 
         _audioPlayer.Play(spatialProvider);
 

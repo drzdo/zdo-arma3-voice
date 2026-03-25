@@ -130,6 +130,8 @@ public class AudioConfig
     public float RadioPan { get; set; } = 0f;
     /// <summary>Probability (0-1) that a unit will voice-acknowledge a command. 0=never, 1=always.</summary>
     public float AckChance { get; set; } = 0f;
+    /// <summary>Radio voice volume (0-1). 1.0 = full volume.</summary>
+    public float RadioVolume { get; set; } = 1f;
     public RadioConfig Radio { get; set; } = new();
 }
 

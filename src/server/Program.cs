@@ -121,7 +121,7 @@ public class Program
             var dialogLlm = CreateLlmClient(config.Llm.Dialog);
             var npcDialog = new NpcDialog(dialogLlm);
             dialogManager = new DialogManager(
-                npcDialog, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan);
+                npcDialog, tts, audioPlayer, radioEffect, gameState, unitRegistry, config.Audio.RadioPan, config.Audio.RadioVolume);
             Log.Info("Server", "Dialog ready.");
         }
         else

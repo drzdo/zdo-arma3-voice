@@ -5,6 +5,7 @@ server:
 audio:
   radio_pan: 0.0  # -1.0 = left ear, 0.0 = both ears, 1.0 = right ear
   ack_chance: 0.5  # 0.0 = units never voice-acknowledge, 1.0 = always
+  radio_volume: 1.0  # 0.0 = silent, 1.0 = full volume
   radio:
     low_cut_hz: 300  # band-pass low cutoff
     high_cut_hz: 3000  # band-pass high cutoff
