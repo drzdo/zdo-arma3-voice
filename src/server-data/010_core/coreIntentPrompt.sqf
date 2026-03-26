@@ -107,8 +107,9 @@ zdoArmaVoice_fnc_coreIntentPrompt = {
         + _cmdList
         + _nl
         + "=== COMMON ARG TYPES ===" + _nl
-        + "Position: ""lookAt"" (crosshair/map cursor) | {""type"":""relative"",""distance"":N,""direction"":DIR} | {""type"":""azimuth"",""distance"":N,""bearing"":0-360} | {""type"":""marker"",""marker"":""markerName""} | {""type"":""named"",""name"":""objectName""} | {""type"":""unit"",""netId"":""netId"" or ""name"":""unitName""}." + _nl
+        + "Position: ""lookAt"" (crosshair/map cursor) | {""type"":""relative"",""distance"":N,""direction"":DIR} | {""type"":""azimuth"",""distance"":N,""bearing"":0-360} | {""type"":""clock"",""distance"":N,""hour"":1-12} | {""type"":""marker"",""marker"":""markerName""} | {""type"":""named"",""name"":""objectName""} | {""type"":""unit"",""netId"":""netId"" or ""name"":""unitName""}." + _nl
         + "  Use type ""unit"" when player says to move to another unit's position (e.g. ""move to Braun"", ""go to Miller"")." + _nl
+        + "  Use type ""clock"" for clock-position directions (e.g. ""2 o'clock"", ""на 10 часов""). hour=12 is forward, 3=right, 6=behind, 9=left." + _nl
         + "  DIR: forward/back/left/right/north/south/east/west/north-east/north-west/south-east/south-west/north-north-east/east-north-east/east-south-east/south-south-east/south-south-west/west-south-west/west-north-west/north-north-west" + _nl
         + "  If direction without distance (""go south""), use distance=100." + _nl
         + _nl

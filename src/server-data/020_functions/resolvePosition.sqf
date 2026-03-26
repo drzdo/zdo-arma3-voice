@@ -38,6 +38,14 @@ zdoArmaVoice_fnc_resolvePosition = {
             private _result = [(_pos select 0) + _distance * sin _bearing, (_pos select 1) + _distance * cos _bearing, _pos select 2];
             _result
         };
+        case "clock": {
+            // Clock position relative to player facing: 12=forward, 3=right, 6=behind, 9=left
+            private _distance = _spec getOrDefault ["distance", 100];
+            private _hour = _spec getOrDefault ["hour", 12];
+            private _bearing = (getDir player) + (_hour * 30);
+            private _pos = getPosATL player;
+            [(_pos select 0) + _distance * sin _bearing, (_pos select 1) + _distance * cos _bearing, _pos select 2]
+        };
         case "azimuth": {
             private _distance = _spec getOrDefault ["distance", 100];
             private _bearing = _spec getOrDefault ["bearing", 0];
