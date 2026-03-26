@@ -1,6 +1,3 @@
-// Recon loop — called from commandRecon via spawn
-// Params: [unitNetIds, destination, moveBearing, stance]
-// Units advance in 30m bounds, scan at each stop, report hostiles
 zdoArmaVoice_fnc_reconLoop = {
     params ["_unitNetIds", "_destination", "_moveBearing", "_stance"];
     private _startTime = time;
