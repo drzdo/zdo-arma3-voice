@@ -35,7 +35,20 @@ public class ResamplingWaveIn : IWaveIn, IDisposable
 
     private void OnCaptureData(object? sender, WaveInEventArgs e)
     {
-        var sourceProvider = new RawSourceWaveStream(new MemoryStream(e.Buffer, 0, e.BytesRecorded), _sourceFormat);
+        if (e.BytesRecorded == 0) return;
+
+        // Detect if device format changed (e.g. OBS started and changed shared mode format)
+        var currentFormat = _capture.WaveFormat;
+        if (currentFormat.SampleRate != _sourceFormat.SampleRate
+            || currentFormat.BitsPerSample != _sourceFormat.BitsPerSample
+            || currentFormat.Channels != _sourceFormat.Channels)
+        {
+            Log.Warn("Mic", $"Device format CHANGED: {_sourceFormat.SampleRate}Hz/{_sourceFormat.BitsPerSample}bit/{_sourceFormat.Channels}ch -> {currentFormat.SampleRate}Hz/{currentFormat.BitsPerSample}bit/{currentFormat.Channels}ch");
+        }
+
+        // Use the capture's current format, not the cached one, to handle format changes
+        var liveFormat = _capture.WaveFormat;
+        var sourceProvider = new RawSourceWaveStream(new MemoryStream(e.Buffer, 0, e.BytesRecorded), liveFormat);
         var sampleProvider = sourceProvider.ToSampleProvider();
 
         if (sampleProvider.WaveFormat.Channels > 1)
