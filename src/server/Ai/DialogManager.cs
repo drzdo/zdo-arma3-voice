@@ -22,6 +22,7 @@ public class DialogManager
     private readonly RadioEffect _radioEffect;
     private readonly GameState _gameState;
     private readonly UnitRegistry _unitRegistry;
+    private readonly Game.RpcClient? _rpc;
     private readonly float _radioPan;
     private readonly float _radioVolume;
     private readonly Channel<DialogRequest> _queue;
@@ -34,7 +35,8 @@ public class DialogManager
         GameState gameState,
         UnitRegistry unitRegistry,
         float radioPan = 0f,
-        float radioVolume = 1f)
+        float radioVolume = 1f,
+        Game.RpcClient? rpc = null)
     {
         _npcDialog = npcDialog;
         _tts = tts;
@@ -44,6 +46,7 @@ public class DialogManager
         _radioPan = radioPan;
         _radioVolume = radioVolume;
         _unitRegistry = unitRegistry;
+        _rpc = rpc;
 
         _queue = Channel.CreateUnbounded<DialogRequest>(new UnboundedChannelOptions
         {
@@ -109,12 +112,20 @@ public class DialogManager
         var spatialProvider = new SpatialSampleProvider(
             samples, radioSamples, sampleRate, _gameState, request.TargetNetId, _unitRegistry, request.IsRadio, _radioPan, _radioVolume);
 
+        // 6. Enable lip movement
+        if (_rpc != null && !string.IsNullOrEmpty(request.TargetNetId))
+            _rpc.Fire($"(\"{request.TargetNetId}\" call BIS_fnc_objectFromNetId) setRandomLip true");
+
         _audioPlayer.Play(spatialProvider);
 
         Log.Info("DialogManager", $"Playing {npcName}'s response...");
 
         while (_audioPlayer.IsPlaying && !ct.IsCancellationRequested)
             await Task.Delay(100, ct);
+
+        // 7. Stop lip movement
+        if (_rpc != null && !string.IsNullOrEmpty(request.TargetNetId))
+            _rpc.Fire($"(\"{request.TargetNetId}\" call BIS_fnc_objectFromNetId) setRandomLip false");
 
         Log.Info("DialogManager", $"Finished {npcName}.");
     }
