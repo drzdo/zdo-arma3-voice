@@ -49,12 +49,18 @@ tts:
     style: 0.2
     use_speaker_boost: false
     voices:
-      default: YOUR_DEFAULT_VOICE_ID
-      blufor: YOUR_BLUFOR_VOICE_ID
-      opfor: YOUR_OPFOR_VOICE_ID
-      indfor: YOUR_INDFOR_VOICE_ID
-      # per unit name:
-      # Miller: YOUR_MILLER_VOICE_ID
+      # Single voice or list of voices (random one assigned per unit, stays consistent)
+      default:
+        - VOICE_ID_1
+        - VOICE_ID_2
+        - VOICE_ID_3
+      # Per side (single voice also works):
+      # blufor: SINGLE_VOICE_ID
+      # opfor:
+      #   - OPFOR_VOICE_1
+      #   - OPFOR_VOICE_2
+      # Per unit name:
+      # Miller: SPECIFIC_VOICE_ID
   windows:
     voice: ""  # empty = default. Run server to see available voices.
     rate: 0    # -10 (slowest) to 10 (fastest)

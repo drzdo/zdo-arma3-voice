@@ -234,9 +234,29 @@ public class ElevenLabsConfig
     public bool UseSpeakerBoost { get; set; } = false;
     /// <summary>
     /// Voice mapping. Keys: "default", "blufor", "opfor", "indfor", "civilian", or a unit name.
-    /// Values: ElevenLabs voice IDs.
+    /// Values: single voice ID string, or a list of voice IDs (one is randomly assigned per unit).
     /// </summary>
-    public Dictionary<string, string> Voices { get; set; } = new();
+    [YamlMember(Alias = "voices")]
+    public Dictionary<string, object> RawVoices { get; set; } = new();
+
+    [YamlIgnore]
+    public Dictionary<string, List<string>> Voices
+    {
+        get
+        {
+            var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, val) in RawVoices)
+            {
+                if (val is string s)
+                    result[key] = [s];
+                else if (val is List<object> list)
+                    result[key] = list.Select(x => x?.ToString() ?? "").Where(x => x != "").ToList();
+                else if (val != null)
+                    result[key] = [val.ToString() ?? ""];
+            }
+            return result;
+        }
+    }
 }
 
 // ── LLM ──────────────────────────────────────────────────

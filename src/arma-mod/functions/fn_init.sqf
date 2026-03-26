@@ -54,10 +54,13 @@ addMissionEventHandler ["EachFrame", {
     if (zdo_arma_voice_frameCount >= zdo_arma_voice_stateInterval) then {
         zdo_arma_voice_frameCount = 0;
 
+        // Squad members (any distance) + nearby non-squad units (50m)
+        private _squad = (units group player) - [player];
         private _nearby = nearestObjects [player, ["Man"], 50] select {
-            alive _x && _x != player
+            alive _x && _x != player && !(_x in _squad)
         };
-        private _units = _nearby apply {
+        private _all = _squad + _nearby;
+        private _units = _all apply {
             [_x call BIS_fnc_netId, getPosASL _x]
         };
         "zdo_arma_voice" callExtension toJSON createHashMapFromArray [

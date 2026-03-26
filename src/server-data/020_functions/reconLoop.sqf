@@ -157,8 +157,23 @@ zdoArmaVoice_fnc_reconLoop = {
         ]
     };
 
-    // Clear
+    // Clear - first active unit reports via radio
     call _fnReset;
-    { doStop _x } forEach (call _fnActiveUnits);
-    systemChat "Recon complete — area clear."
+    private _active = call _fnActiveUnits;
+    { doStop _x } forEach _active;
+    if (count _active > 0) then {
+        private _reporter = _active select 0;
+        private _reporterNetId = _reporter call BIS_fnc_netId;
+        "zdo_arma_voice" callExtension toJSON createHashMapFromArray [
+            ["t", "exec"],
+            ["command", "dialog"],
+            ["args", createHashMapFromArray [
+                ["target", _reporterNetId],
+                ["text", "Report that you reached the destination, area is clear, no hostiles spotted."]
+            ]],
+            ["units", [_reporterNetId]],
+            ["lookAtPosition", [0,0,0]],
+            ["isRadio", true]
+        ]
+    }
 }

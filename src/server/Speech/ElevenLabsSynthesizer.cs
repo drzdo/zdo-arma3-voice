@@ -16,18 +16,20 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
     private readonly float _similarityBoost;
     private readonly float _style;
     private readonly bool _useSpeakerBoost;
-    private readonly Dictionary<string, string> _voices;
+    private readonly Dictionary<string, List<string>> _voices;
+    private readonly Dictionary<string, string> _unitVoiceAssignments = new();
+    private readonly Random _rng = new();
 
     public ElevenLabsSynthesizer(string apiKey, string modelId,
         float stability, float similarityBoost, float style, bool useSpeakerBoost,
-        Dictionary<string, string> voices)
+        Dictionary<string, List<string>> voices)
     {
         _modelId = modelId;
         _stability = stability;
         _similarityBoost = similarityBoost;
         _style = style;
         _useSpeakerBoost = useSpeakerBoost;
-        _voices = new Dictionary<string, string>(voices, StringComparer.OrdinalIgnoreCase);
+        _voices = new Dictionary<string, List<string>>(voices, StringComparer.OrdinalIgnoreCase);
 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _http.DefaultRequestHeaders.Add("xi-api-key", apiKey);
@@ -89,26 +91,39 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
     }
 
     /// <summary>
-    /// Resolve voice ID: unit name → side → default.
+    /// Resolve voice ID: check sticky assignment first, then unit name → side → default.
+    /// First call for a unit picks a random voice from the matched pool and caches it.
     /// </summary>
     private string? ResolveVoiceId(SpeechContext? context)
     {
-        // 1. Unit name match — exact first, then contains (e.g. "Braun" matches "Sgt. Braun")
-        if (context?.UnitName != null)
-        {
-            if (_voices.TryGetValue(context.UnitName, out var byExact))
-                return byExact;
+        var unitKey = context?.UnitName ?? "";
 
-            foreach (var (key, voiceId) in _voices)
+        // Return cached assignment if exists
+        if (!string.IsNullOrEmpty(unitKey) && _unitVoiceAssignments.TryGetValue(unitKey, out var cached))
+            return cached;
+
+        // Find the voice pool
+        List<string>? pool = null;
+
+        // 1. Unit name match — exact first, then contains
+        if (!string.IsNullOrEmpty(unitKey))
+        {
+            if (_voices.TryGetValue(unitKey, out var byExact))
+                pool = byExact;
+
+            if (pool == null)
             {
-                if (key is "default" or "blufor" or "opfor" or "indfor" or "civilian") continue;
-                if (context.UnitName.Contains(key, StringComparison.OrdinalIgnoreCase))
-                    return voiceId;
+                foreach (var (key, voices) in _voices)
+                {
+                    if (key is "default" or "blufor" or "opfor" or "indfor" or "civilian") continue;
+                    if (unitKey.Contains(key, StringComparison.OrdinalIgnoreCase))
+                    { pool = voices; break; }
+                }
             }
         }
 
-        // 2. Side match (SQF sides: WEST=blufor, EAST=opfor, GUER=indfor, CIV=civilian)
-        if (context?.Side != null)
+        // 2. Side match
+        if (pool == null && context?.Side != null)
         {
             var sideKey = context.Side.ToUpperInvariant() switch
             {
@@ -116,15 +131,27 @@ public class ElevenLabsSynthesizer : ISpeechSynthesizer
                 "EAST" => "opfor",
                 "GUER" or "RESISTANCE" => "indfor",
                 "CIV" or "CIVILIAN" => "civilian",
-                _ => context.Side // try raw value too
+                _ => context.Side
             };
 
             if (_voices.TryGetValue(sideKey, out var bySide))
-                return bySide;
+                pool = bySide;
         }
 
         // 3. Default
-        _voices.TryGetValue("default", out var def);
-        return def;
+        if (pool == null)
+            _voices.TryGetValue("default", out pool);
+
+        if (pool == null || pool.Count == 0)
+            return null;
+
+        // Pick random from pool and cache for this unit
+        var voiceId = pool[_rng.Next(pool.Count)];
+        if (!string.IsNullOrEmpty(unitKey))
+        {
+            _unitVoiceAssignments[unitKey] = voiceId;
+            Log.Info("ElevenLabs", $"Assigned voice {voiceId[..Math.Min(8, voiceId.Length)]}... to {unitKey}");
+        }
+        return voiceId;
     }
 }
