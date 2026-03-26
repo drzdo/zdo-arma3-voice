@@ -110,7 +110,48 @@ public class DataLoader
             }
         }
 
-        // Collapse runs of whitespace into single spaces
-        return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+        // Collapse runs of whitespace into single spaces, but only outside strings
+        var raw = sb.ToString();
+        var result = new StringBuilder(raw.Length);
+        bool inStr = false;
+        bool prevWasSpace = false;
+        for (int j = 0; j < raw.Length; j++)
+        {
+            var c = raw[j];
+            if (inStr)
+            {
+                result.Append(c);
+                if (c == '"')
+                {
+                    if (j + 1 < raw.Length && raw[j + 1] == '"')
+                    {
+                        result.Append('"');
+                        j++;
+                    }
+                    else
+                    {
+                        inStr = false;
+                    }
+                }
+                prevWasSpace = false;
+            }
+            else if (c == '"')
+            {
+                inStr = true;
+                result.Append(c);
+                prevWasSpace = false;
+            }
+            else if (char.IsWhiteSpace(c))
+            {
+                if (!prevWasSpace) result.Append(' ');
+                prevWasSpace = true;
+            }
+            else
+            {
+                result.Append(c);
+                prevWasSpace = false;
+            }
+        }
+        return result.ToString().Trim();
     }
 }
