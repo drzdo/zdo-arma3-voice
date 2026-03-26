@@ -33,9 +33,33 @@ public class ResamplingWaveIn : IWaveIn, IDisposable
         _capture.RecordingStopped += (s, e) => RecordingStopped?.Invoke(s, e);
     }
 
+    private int _dataCallbackCount;
+    private int _silentCallbackCount;
+    private DateTime _lastDiagLog = DateTime.MinValue;
+
     private void OnCaptureData(object? sender, WaveInEventArgs e)
     {
         if (e.BytesRecorded == 0) return;
+
+        _dataCallbackCount++;
+
+        // Check if buffer is all silence (zeroes)
+        bool isSilent = true;
+        for (int i = 0; i < Math.Min(e.BytesRecorded, 200); i++)
+        {
+            if (e.Buffer[i] != 0) { isSilent = false; break; }
+        }
+        if (isSilent) _silentCallbackCount++;
+
+        // Log diagnostics every 5 seconds
+        if ((DateTime.UtcNow - _lastDiagLog).TotalSeconds >= 5)
+        {
+            _lastDiagLog = DateTime.UtcNow;
+            var pctSilent = _dataCallbackCount > 0 ? _silentCallbackCount * 100 / _dataCallbackCount : 0;
+            Log.Info("Mic", $"Diag: {_dataCallbackCount} callbacks, {_silentCallbackCount} silent ({pctSilent}%), last chunk {e.BytesRecorded}B, format={_capture.WaveFormat.SampleRate}Hz/{_capture.WaveFormat.BitsPerSample}bit/{_capture.WaveFormat.Channels}ch");
+            _dataCallbackCount = 0;
+            _silentCallbackCount = 0;
+        }
 
         // Detect if device format changed (e.g. OBS started and changed shared mode format)
         var currentFormat = _capture.WaveFormat;

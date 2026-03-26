@@ -27,6 +27,17 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      - name: Check SQF file sizes (max 10KB for callExtension buffer)
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem src/server-data -Recurse -Filter *.sqf | Where-Object { $_.Length -gt 10240 } | ForEach-Object {
+            Write-Error "$($_.FullName): $($_.Length) bytes (exceeds 10KB limit)"
+            $failed = $true
+          }
+          if ($failed) { exit 1 }
+          Write-Host "All SQF files under 10KB limit."
+
       - name: Build
         run: dotnet build --no-restore -c Release
 
