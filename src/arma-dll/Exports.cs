@@ -59,6 +59,7 @@ public static class Exports
                     break;
 
                 case "ptt":
+                case "exec":
                     // Forward entire JSON to server
                     Client.Send(input);
                     break;

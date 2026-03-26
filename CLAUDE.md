@@ -103,6 +103,18 @@ All server config in `config.yaml` (gitignored). Template in `config-example.yam
 - `.github/workflows/build.yml` — build + artifact upload on push/PR
 - `.github/workflows/release.yml` — build + GitHub Release on tag push (`git tag v0.1.0 && git push --tags`)
 
+### Self-review
+
+After writing or modifying code, ALWAYS re-read the final version and check for:
+- SQF operator precedence (parenthesize all binary operator results before comparisons)
+- Variable shadowing in nested `forEach` loops
+- Brace/bracket balance
+- Non-ASCII characters in files that will run on Windows (PowerShell, etc.)
+- File size for SQF files (must be under 10KB for callExtension buffer)
+- Logic errors, unreachable code, off-by-one errors
+
+Do not claim changes are done until this review is complete. If unsure about something, say so explicitly.
+
 ### Rules
 
 - When a command is added, changed, or removed in `src/server-data/030_commands/`, update `README.md` to reflect the change.
