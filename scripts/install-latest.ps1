@@ -1,9 +1,9 @@
-# ZdoArmaVoice — download latest release to current directory
+# ZdoArmaVoice - download latest release to current directory
 # Usage: powershell -ExecutionPolicy Bypass -File install-latest.ps1 [-ServerOnly]
 #
 # Downloads and extracts:
-#   ./@zdo_arma_voice/  — Arma 3 mod (copy to Arma 3 directory)
-#   ./server/      — C# server (exe + server-data + config example)
+#   ./@zdo_arma_voice/  - Arma 3 mod (copy to Arma 3 directory)
+#   ./server/      - C# server (exe + server-data + config example)
 #
 # -ServerOnly: skip mod download, install only the server
 
@@ -67,7 +67,7 @@ Remove-Item "zdo_arma_voice_server.zip"
 Write-Host ""
 Write-Host "Done! Installed ZdoArmaVoice $tag"
 if (-not $ServerOnly) {
-    Write-Host "  @zdo_arma_voice/ — copy to your Arma 3 directory"
+    Write-Host "  @zdo_arma_voice/ - copy to your Arma 3 directory"
 }
-Write-Host "  server/     — copy config-example.yaml to config.yaml, edit it, then run:"
+Write-Host "  server/     - copy config-example.yaml to config.yaml, edit it, then run:"
 Write-Host "               .\server\ZdoArmaVoice.Server.exe --config .\server\config.yaml"
